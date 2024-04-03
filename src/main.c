@@ -34,6 +34,8 @@
 #include <irq.h>
 #include <plat.h>
 
+#include <hypervisor.h>
+
 /*
  * Prototypes for the standard FreeRTOS callback/hook functions implemented
  * within this file.  See https://www.freertos.org/a00016.html
@@ -52,6 +54,8 @@ void vTask(void *pvParameters)
     while (1)
     {
         printf("Task%d: %d\n", id, counter++);
+        int cpu_id = hypercall(HC_GET_CPU_ID, 1, 2, 3);
+        printf("CPU id: %d\n\n", cpu_id);
         vTaskDelay(1000 / portTICK_PERIOD_MS);
     }
 }
