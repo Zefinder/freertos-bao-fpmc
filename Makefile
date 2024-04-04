@@ -15,6 +15,7 @@ include $(bmrt_dir)/setup.mk
 app_src_dir:=$(ROOT_DIR)/src
 include $(app_src_dir)/sources.mk
 C_SRC+=$(addprefix $(app_src_dir)/, $(src_c_srcs))
+INC_DIRS+=$(app_src_dir)/inc
 
 # Freertos kernel sources
 freertos_dir:=$(ROOT_DIR)/src/freertos

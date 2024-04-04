@@ -74,6 +74,8 @@ int main(void){
     irq_set_prio(UART_IRQ_ID, IRQ_MAX_PRIO);
     irq_enable(UART_IRQ_ID);
 
+
+
     xTaskCreate(
         vTask,
         "Task1",
@@ -90,7 +92,8 @@ int main(void){
         tskIDLE_PRIORITY + 1,
         NULL);
 
-    vTaskStartScheduler();
+    xTaskGetCurrentTaskHandle
+
 }
 /*-----------------------------------------------------------*/
 
