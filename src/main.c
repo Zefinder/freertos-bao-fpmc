@@ -85,7 +85,6 @@ int main(void)
         (void *)1,
         tskIDLE_PRIORITY + 1,
         &(xHandle1));
-    // vTaskCoreAffinitySet(xHandle1, (1 << 0));
 
     xTaskCreate(
         vTask,
@@ -94,7 +93,6 @@ int main(void)
         (void *)2,
         tskIDLE_PRIORITY + 1,
         &(xHandle2));
-    // vTaskCoreAffinitySet(xHandle2, (1 << 1));
 
     vTaskStartScheduler();
 }

@@ -3,5 +3,5 @@
 	url = https://github.com/bao-project/bao-baremetal-guest
 [submodule "src/freertos-kernel"]
 	path = src/freertos
-	url = https://github.com/Zefinder/FreeRTOS-Kernel
+	url = https://github.com/FreeRTOS/FreeRTOS-Kernel
 	
