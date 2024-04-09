@@ -16,9 +16,9 @@ static void tick_handler_wrapper(unsigned id) {
 }
 
 void FreeRTOS_SetupTickInterrupt(){
-    irq_set_handler(27, tick_handler_wrapper);
-    irq_enable(27);
-    irq_set_prio(27, portLOWEST_USABLE_INTERRUPT_PRIORITY << portPRIORITY_SHIFT);
+    irq_set_handler(TIMER_IRQ_ID, tick_handler_wrapper);
+    irq_enable(TIMER_IRQ_ID);
+    irq_set_prio(TIMER_IRQ_ID, portLOWEST_USABLE_INTERRUPT_PRIORITY << portPRIORITY_SHIFT);
 
     uint64_t freq = sysreg_cntfrq_el0_read();
     timer_step = freq / configTICK_RATE_HZ;

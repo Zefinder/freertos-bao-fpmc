@@ -54,15 +54,17 @@ void vTask(void *pvParameters)
     while (1)
     {
         printf("Task%d: %d\n", id, counter++);
-        int cpu_id = hypercall(HC_GET_CPU_ID, 1, 2, 3);
-        printf("CPU id: %d\n\n", cpu_id);
+        hypercall(5, 1, 2, 3);
+        // printf("CPU id: %d\n\n", cpu_id);
         vTaskDelay(1000 / portTICK_PERIOD_MS);
     }
 }
 
 void uart_rx_handler()
 {
-    printf("%s\n", __func__);
+    printf("%s\n", "PAUSE");
+    while (1) __asm__ volatile ("wfi \n\t");
+    // hypercall(5, 1, 2, 3);
     uart_clear_rxirq();
 }
 
