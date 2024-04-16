@@ -35,6 +35,9 @@
 #include <plat.h>
 
 #include <hypervisor.h>
+#include <prefetch.h>
+#include <state_machine.h>
+#include <ipi.h>
 
 /*
  * Prototypes for the standard FreeRTOS callback/hook functions implemented
@@ -45,58 +48,16 @@ void vApplicationIdleHook(void);
 void vApplicationStackOverflowHook(TaskHandle_t pxTask, char *pcTaskName);
 void vApplicationTickHook(void);
 
+/* Application main */
+extern void main_app(void);
+
 /*-----------------------------------------------------------*/
-
-void vTask(void *pvParameters)
-{
-    unsigned long counter = 0;
-    unsigned long id = (unsigned long)pvParameters;
-    while (1)
-    {
-        printf("Task%d: %d\n", id, counter++);
-        hypercall(5, 1, 2, 3);
-        // printf("CPU id: %d\n\n", cpu_id);
-        vTaskDelay(1000 / portTICK_PERIOD_MS);
-    }
-}
-
-void uart_rx_handler()
-{
-    printf("%s\n", "PAUSE");
-    while (1) __asm__ volatile ("wfi \n\t");
-    // hypercall(5, 1, 2, 3);
-    uart_clear_rxirq();
-}
 
 int main(void)
 {
+    main_app();
 
-    printf("Bao FreeRTOS guest\n");
-
-    uart_enable_rxirq();
-    irq_set_handler(UART_IRQ_ID, uart_rx_handler);
-    irq_set_prio(UART_IRQ_ID, IRQ_MAX_PRIO);
-    irq_enable(UART_IRQ_ID);
-
-    TaskHandle_t xHandle1, xHandle2;
-
-    xTaskCreate(
-        vTask,
-        "Task1",
-        configMINIMAL_STACK_SIZE,
-        (void *)1,
-        tskIDLE_PRIORITY + 1,
-        &(xHandle1));
-
-    xTaskCreate(
-        vTask,
-        "Task2",
-        configMINIMAL_STACK_SIZE,
-        (void *)2,
-        tskIDLE_PRIORITY + 1,
-        &(xHandle2));
-
-    vTaskStartScheduler();
+    return 0;
 }
 /*-----------------------------------------------------------*/
 

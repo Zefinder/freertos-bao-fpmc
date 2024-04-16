@@ -7,15 +7,22 @@ BUILD_DIR:=$(ROOT_DIR)/build/$(PLATFORM)
 bmrt_dir:=$(ROOT_DIR)/src/baremetal-runtime
 include $(bmrt_dir)/setup.mk
 
-
-
 # Inlcude all freertos sources
 
 # Main freertos application sources
 app_src_dir:=$(ROOT_DIR)/src
 include $(app_src_dir)/sources.mk
 C_SRC+=$(addprefix $(app_src_dir)/, $(src_c_srcs))
+ASM_SRC+=$(addprefix $(app_src_dir)/, $(src_s_srcs))
 INC_DIRS+=$(app_src_dir)/inc
+
+# Specific freertos application sources
+ifeq ($(SELECTED_MAIN),)
+$(error Application not selected, you must choose an application)
+endif
+spec_src_dir:=$(app_src_dir)/$(SELECTED_MAIN)
+include $(spec_src_dir)/sources.mk
+C_SRC+=$(addprefix $(spec_src_dir)/, $(spec_c_srcs))
 
 # Freertos kernel sources
 freertos_dir:=$(ROOT_DIR)/src/freertos
