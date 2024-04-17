@@ -23,6 +23,7 @@ endif
 spec_src_dir:=$(app_src_dir)/$(SELECTED_MAIN)
 include $(spec_src_dir)/sources.mk
 C_SRC+=$(addprefix $(spec_src_dir)/, $(spec_c_srcs))
+ASM_SRC+=$(addprefix $(spec_src_dir)/, $(spec_s_srcs))
 
 # Freertos kernel sources
 freertos_dir:=$(ROOT_DIR)/src/freertos

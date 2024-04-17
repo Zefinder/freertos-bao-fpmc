@@ -101,7 +101,7 @@ void main_app(void)
 
     xTaskCreate(
         vTask,
-        "Task1",
+        "ExecutionFPSCHED",
         configMINIMAL_STACK_SIZE,
         (void *)1,
         tskIDLE_PRIORITY + 1,
