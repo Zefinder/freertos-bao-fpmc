@@ -6,7 +6,7 @@ struct periodic_arguments
 {
     TaskFunction_t pxTaskCode;
     TickType_t tickPeriod;
-    void *pvParameters; 
+    void *pvParameters;
 };
 
 void vPeriodicTask(void *pvParameters)
@@ -32,17 +32,17 @@ void vPeriodicTask(void *pvParameters)
         if (currentTick - xLastWakeTime < tickPeriod)
         {
             // Wait for the next cycle.
-            vTaskDelayUntil(&xLastWakeTime, tickPeriod);
+            xTaskDelayUntil(&xLastWakeTime, tickPeriod);
         }
         else if (currentTick - xLastWakeTime > tickPeriod)
         {
             // We compute next sync period and wait until there to restart
             while (currentTick - xLastWakeTime > tickPeriod)
             {
-                printf("a");
+                TickType_t diff = currentTick - xLastWakeTime;
                 xLastWakeTime += tickPeriod;
             }
-            vTaskDelayUntil(&xLastWakeTime, tickPeriod);
+            xTaskDelayUntil(&xLastWakeTime, tickPeriod);
         }
 
         // Execute task here
@@ -59,9 +59,10 @@ BaseType_t xTaskPeriodicCreate(TaskFunction_t pxTaskCode,
                                TaskHandle_t *const pxCreatedTask)
 {
     // Create struct
-    struct periodic_arguments periodic_arguments = {.pxTaskCode = pxTaskCode, .tickPeriod = tickPeriod, .pvParameters = pvParameters};
     struct periodic_arguments *periodic_arguments_ptr = (struct periodic_arguments *)pvPortMalloc(sizeof(struct periodic_arguments));
-    *periodic_arguments_ptr = periodic_arguments;
+    periodic_arguments_ptr->pxTaskCode = pxTaskCode;
+    periodic_arguments_ptr->tickPeriod = tickPeriod;
+    periodic_arguments_ptr->pvParameters = pvParameters;
 
     xTaskCreate(
         vPeriodicTask,

@@ -18,7 +18,7 @@ TaskHandle_t xTaskHandler;
 #define DATA_SIZE 448 * 1024
 uint8_t appdata[DATA_SIZE] = {1};
 
-void memory_phase_state()
+void prefetch_memory()
 {
     // TODO Create random app data
     prefetch_data((uint64_t)appdata, DATA_SIZE);
@@ -40,7 +40,7 @@ void vTask(void *pvParameters)
 
     // Access granted
     change_state(MEMORY_PHASE);
-    memory_phase_state();
+    prefetch_memory();
     vTaskDelay(800 / portTICK_PERIOD_MS);
 
     // printf("Enter computation section\n");
@@ -115,7 +115,7 @@ void main_app(void)
         vTask,
         "TestPeriodicTask",
         configMINIMAL_STACK_SIZE,
-        1000 / portTICK_PERIOD_MS,
+        pdMS_TO_TICKS(1000),
         (void *)cpu_id,
         tskIDLE_PRIORITY + 1,
         &(xTaskHandler));
