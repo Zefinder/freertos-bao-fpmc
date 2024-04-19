@@ -4,15 +4,17 @@
 #include <plat.h>
 #include <ipi.h>
 
+#include <stdio.h>
+
 #include <hypervisor.h>
 #include <prefetch.h>
 #include <state_machine.h>
 #include <benchmark.h>
 
-#define NUMBER_OF_TESTS 900
+#define NUMBER_OF_TESTS 90000
 
 // Change location for appdata
-#define DATA_SIZE 448 * 1024
+#define DATA_SIZE 200 * 1024
 uint8_t appdata[DATA_SIZE] = {1};
 
 void prefetch_memory()
@@ -22,6 +24,7 @@ void prefetch_memory()
 }
 
 int counter = 0;
+int print_counter = 0;
 void vTask(void *pvParameters)
 {
     if (counter < NUMBER_OF_TESTS)
@@ -34,11 +37,18 @@ void vTask(void *pvParameters)
 
         // Increment counter
         counter += 1;
+
+        // Print for each 1000 tests
+        if (++print_counter == 1000) {
+            printf("\t# Number of realised tests: %d\n", counter);
+            print_counter = 0;
+        }
     }
     else
     {
         // Show results and destroy task
         print_benchmark_results();
+        printf("Tests finished!\n");
         vTaskDelete(NULL);
     }
 }
@@ -46,7 +56,8 @@ void vTask(void *pvParameters)
 void main_app(void)
 {
     int frequency = 300;
-    init_benchmark(NUMBER_OF_TESTS);
+    printf("Begin legacy prefetch tests...\n");
+    init_benchmark();
 
     xTaskPeriodicCreate(
         vTask,

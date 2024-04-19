@@ -5,14 +5,12 @@
 #include <generic_timer.h>
 
 // Min, Max, Average
+uint64_t sum = 0;
 uint64_t min = -1;
 uint64_t max = 0;
 uint64_t average = -1;
 
-uint64_t *execution_time;
-int test_upper_bound = 0;
 int test_counter = 0;
-int test_size = 0;
 
 uint64_t base_frequency;
 
@@ -28,13 +26,7 @@ int get_maximum_time()
 
 int get_average_time()
 {
-    uint64_t sum = 0;
-    for (int index = 0; index < test_size; index++)
-    {
-        sum += execution_time[index];
-    }
-
-    average = sum / test_size;
+    average = sum / test_counter;
     return pdSYSTICK_TO_US(base_frequency, average);
 }
 
@@ -60,28 +52,24 @@ void run_benchmark(benchmark_t benchmark_code)
         max = elapsedTime;
     }
 
-    // Put in array for average (index to start if overflow)
-    execution_time[test_counter++] = elapsedTime;
-    if (test_counter == test_upper_bound)
-    {
-        test_counter = 0;
-    }
-    if (test_size != test_upper_bound)
-    {
-        test_size += 1;
-    }
+    // Add elapsed time with other times
+    sum += elapsedTime;
+    test_counter += 1;
+
+    // Print result for result array
+    printf("%ld,", pdSYSTICK_TO_US(base_frequency, elapsedTime));
 }
 
-void init_benchmark(int number_of_tests)
+void init_benchmark()
 {
-    test_upper_bound = number_of_tests;
-    execution_time = (uint64_t *)pvPortMalloc(sizeof(uint64_t) * number_of_tests);
+    printf("elapsed_time_array = [");
     base_frequency = generic_timer_get_freq();
 }
 
 void print_benchmark_results()
 {
-    printf("MIN: %ld us\n", get_minimum_time());
-    printf("MAX: %ld us\n", get_maximum_time());
-    printf("AVERAGE: %ld us\n", get_average_time());
+    printf("\b]\n"); // Remove last coma and add ]
+    printf("min = %ld # us\n", get_minimum_time());
+    printf("max = %ld # us\n", get_maximum_time());
+    printf("int_average = %ld # us\n", get_average_time());
 }
