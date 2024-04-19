@@ -64,11 +64,13 @@ BaseType_t xTaskPeriodicCreate(TaskFunction_t pxTaskCode,
     periodic_arguments_ptr->tickPeriod = tickPeriod;
     periodic_arguments_ptr->pvParameters = pvParameters;
 
-    xTaskCreate(
+    BaseType_t creationAck = xTaskCreate(
         vPeriodicTask,
         pcName,
         uxStackDepth,
         (void *)periodic_arguments_ptr,
         uxPriority,
         pxCreatedTask);
+
+    return creationAck;
 }
