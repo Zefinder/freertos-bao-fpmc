@@ -18,7 +18,7 @@ INC_DIRS+=$(app_src_dir)/inc
 
 # Specific freertos application sources
 ifeq ($(SELECTED_MAIN),)
-$(error Application not selected, you must choose an application)
+	$(error Application not selected, you must choose an application)
 endif
 spec_src_dir:=$(app_src_dir)/$(SELECTED_MAIN)
 include $(spec_src_dir)/sources.mk

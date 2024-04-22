@@ -2,7 +2,6 @@
 #include <periodic_task.h>
 
 #include <plat.h>
-#include <ipi.h>
 
 #include <stdio.h>
 
@@ -61,7 +60,7 @@ void main_app(void)
 
     xTaskPeriodicCreate(
         vTask,
-        "ExecutionFPSCHED",
+        "ExecutionLEGACY",
         configMINIMAL_STACK_SIZE,
         pdFREQ_TO_TICKS(frequency),
         NULL,

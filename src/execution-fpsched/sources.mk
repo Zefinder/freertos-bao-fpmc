@@ -1,0 +1,1 @@
+spec_c_srcs:= main.c
