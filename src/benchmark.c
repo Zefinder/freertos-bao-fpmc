@@ -68,7 +68,7 @@ void init_benchmark()
 
 void print_benchmark_results()
 {
-    printf("\b]\n"); // Remove last coma and add ]
+    printf("]\n"); // End elapsed time array
     printf("min = %ld # us\n", get_minimum_time());
     printf("max = %ld # us\n", get_maximum_time());
     printf("int_average = %ld # us\n", get_average_time());
