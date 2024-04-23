@@ -101,13 +101,13 @@ void main_app(void)
     irq_set_prio(UART_IRQ_ID, IRQ_MAX_PRIO);
     irq_enable(UART_IRQ_ID);
 
-    irq_set_handler(IPI_PAUSE_IRQ, ipi_pause_handler);
-    irq_enable(IPI_PAUSE_IRQ);
-    irq_set_prio(IPI_PAUSE_IRQ, IRQ_MAX_PRIO);
+    irq_set_handler(IPI_IRQ_PAUSE, ipi_pause_handler);
+    irq_enable(IPI_IRQ_PAUSE);
+    irq_set_prio(IPI_IRQ_PAUSE, IRQ_MAX_PRIO);
 
-    irq_set_handler(IPI_RESUME_IRQ, ipi_resume_handler);
-    irq_enable(IPI_RESUME_IRQ);
-    irq_set_prio(IPI_RESUME_IRQ, IRQ_MAX_PRIO);
+    irq_set_handler(IPI_IRQ_RESUME, ipi_resume_handler);
+    irq_enable(IPI_IRQ_RESUME);
+    irq_set_prio(IPI_IRQ_RESUME, IRQ_MAX_PRIO);
 
     int cpu_id = hypercall(HC_GET_CPU_ID, 0, 0, 0);
 

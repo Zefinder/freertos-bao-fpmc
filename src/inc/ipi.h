@@ -1,8 +1,9 @@
 #ifndef __IPI_H__
 #define __IPI_H__
 
-/* Define IPI IRQ number */
-#define IPI_PAUSE_IRQ   6
-#define IPI_RESUME_IRQ  7
+/* IPI interruptions */
+#define IPI_IRQ_CPU     5
+#define IPI_IRQ_PAUSE   6
+#define IPI_IRQ_RESUME  7
 
 #endif
