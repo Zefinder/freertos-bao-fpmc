@@ -70,6 +70,7 @@ void vTask(void *pvParameters)
     {
         // Show results and destroy task
         print_benchmark_results();
+        end_benchmark();
         printf("Tests finished!\n");
         vTaskDelete(NULL);
     }
@@ -127,6 +128,7 @@ void main_app(void)
 
     int frequency = 300;
     printf("Begin fpsched prefetch tests...\n");
+    start_benchmark();
     init_benchmark(NULL);
 
     xTaskPeriodicCreate(
