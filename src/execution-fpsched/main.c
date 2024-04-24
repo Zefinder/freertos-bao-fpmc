@@ -127,7 +127,7 @@ void main_app(void)
 
     int frequency = 300;
     printf("Begin fpsched prefetch tests...\n");
-    init_benchmark();
+    init_benchmark(NULL);
 
     xTaskPeriodicCreate(
         vTask,

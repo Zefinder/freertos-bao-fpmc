@@ -34,9 +34,17 @@ void run_benchmark(benchmark_t benchmark_code);
 
 /*
  * Init the benchmark with the timer frequency, it's better to measure 
- * things.
+ * things. You can give the benchmark a name that will be given to the
+ * benchmark output variables. The name can start with _ to be better,
+ * since it will be concatenated with the base variable names.
+ * 
+ * For instance, if the name is "_color", the variable names will be 
+ * min_color, max_color, ...
+ * 
+ * If benchmark_name is NULL, then it will be replaced by the empty
+ * string
  */
-void init_benchmark();
+void init_benchmark(char* benchmark_name);
 
 /*
  * Print all times, the min, the max and the int average, ideal for a 

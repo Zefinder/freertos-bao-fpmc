@@ -56,7 +56,7 @@ void main_app(void)
 {
     int frequency = 300;
     printf("Begin legacy prefetch tests...\n");
-    init_benchmark();
+    init_benchmark(NULL);
 
     xTaskPeriodicCreate(
         vTask,

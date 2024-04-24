@@ -79,7 +79,7 @@ void main_app(void)
     if (cpu_number == CPU_MASTER)
     {
         printf("Begin 2 tasks tests (mesured on %d Hz processor)...\n", frequency);
-        init_benchmark();
+        init_benchmark(NULL);
     }
 
     xTaskPeriodicCreate(

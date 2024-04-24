@@ -10,6 +10,9 @@ uint64_t min = -1;
 uint64_t max = 0;
 uint64_t average = -1;
 
+// Benchmark name
+char* bench_name;
+
 int test_counter = 0;
 
 uint64_t base_frequency;
@@ -60,16 +63,25 @@ void run_benchmark(benchmark_t benchmark_code)
     printf("%ld,", pdSYSTICK_TO_US(base_frequency, elapsedTime));
 }
 
-void init_benchmark()
+void init_benchmark(char* benchmark_name)
 {
-    printf("elapsed_time_array = [");
+    if (benchmark_name == NULL)
+    {
+        bench_name = "";
+    }
+    else
+    {
+        bench_name = benchmark_name;
+    }
+
+    printf("elapsed_time_array%s = [", bench_name);
     base_frequency = generic_timer_get_freq();
 }
 
 void print_benchmark_results()
 {
     printf("]\n"); // End elapsed time array
-    printf("min = %ld # us\n", get_minimum_time());
-    printf("max = %ld # us\n", get_maximum_time());
-    printf("int_average = %ld # us\n", get_average_time());
+    printf("min%s = %ld # us\n", bench_name, get_minimum_time());
+    printf("max%s = %ld # us\n", bench_name, get_maximum_time());
+    printf("int_average%s = %ld # us\n", bench_name, get_average_time());
 }
