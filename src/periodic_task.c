@@ -20,6 +20,9 @@ void vPeriodicTask(void *pvParameters)
     TickType_t xLastWakeTime;
     const TickType_t tickPeriod = periodic_arguments->tickPeriod;
 
+    // Don't forget to free the struct
+    vPortFree(pvParameters);
+
     // Initialise the xLastWakeTime variable with the current time.
     xLastWakeTime = xTaskGetTickCount();
 
@@ -60,6 +63,7 @@ BaseType_t xTaskPeriodicCreate(TaskFunction_t pxTaskCode,
 {
     // Create struct
     struct periodic_arguments *periodic_arguments_ptr = (struct periodic_arguments *)pvPortMalloc(sizeof(struct periodic_arguments));
+
     periodic_arguments_ptr->pxTaskCode = pxTaskCode;
     periodic_arguments_ptr->tickPeriod = tickPeriod;
     periodic_arguments_ptr->pvParameters = pvParameters;
