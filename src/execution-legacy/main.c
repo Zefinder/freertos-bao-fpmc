@@ -32,7 +32,7 @@ void vTask(void *pvParameters)
         clear_L2_cache((uint64_t)appdata, DATA_SIZE);
 
         // Benchmark prefetching
-        run_benchmark(prefetch_memory);
+        run_benchmark(prefetch_memory, NULL);
 
         // Increment counter
         counter += 1;

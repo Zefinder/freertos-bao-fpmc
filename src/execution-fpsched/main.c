@@ -47,7 +47,7 @@ void vTask(void *pvParameters)
         // Clear and prefetch
         change_state(MEMORY_PHASE);
         clear_L2_cache((uint64_t)appdata, DATA_SIZE);
-        run_benchmark(prefetch_memory);
+        run_benchmark(prefetch_memory, NULL);
 
         // Revoke for computation
         change_state(COMPUTATION_PHASE);
