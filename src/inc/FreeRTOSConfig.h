@@ -80,7 +80,7 @@
 
 #define configIDLE_SHOULD_YIELD 1
 
-#define configUSE_TIME_SLICING 1
+#define configUSE_TIME_SLICING 0
 
 #define configTIMER_TASK_PRIORITY (configMAX_PRIORITIES - 1)
 
