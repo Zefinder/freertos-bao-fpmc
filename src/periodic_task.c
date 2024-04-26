@@ -1,8 +1,8 @@
+#include <periodic_task.h>
 #include <FreeRTOS.h>
 #include <task.h>
-#include <periodic_task.h>
 
-struct periodic_arguments
+struct prv_periodic_arguments
 {
     TaskFunction_t pxTaskCode;
     TickType_t tickPeriod;
@@ -12,7 +12,7 @@ struct periodic_arguments
 void vPeriodicTask(void *pvParameters)
 {
     // Getting struct from task parameters and extract task function, period and parameters
-    struct periodic_arguments *periodic_arguments = (struct periodic_arguments *)pvParameters;
+    struct prv_periodic_arguments *periodic_arguments = (struct prv_periodic_arguments *)pvParameters;
 
     TaskFunction_t pxTaskCode = periodic_arguments->pxTaskCode;
     void *pvTaskParameters = periodic_arguments->pvParameters;
@@ -56,25 +56,23 @@ void vPeriodicTask(void *pvParameters)
 BaseType_t xTaskPeriodicCreate(TaskFunction_t pxTaskCode,
                                const char *const pcName,
                                const configSTACK_DEPTH_TYPE uxStackDepth,
-                               const TickType_t tickPeriod,
-                               void *const pvParameters,
+                               const struct periodic_arguments periodic_arguments,
                                UBaseType_t uxPriority,
                                TaskHandle_t *const pxCreatedTask)
 {
-    // Create struct
-    struct periodic_arguments *periodic_arguments_ptr = (struct periodic_arguments *)pvPortMalloc(sizeof(struct periodic_arguments));
+    // Create and fill struct
+    struct prv_periodic_arguments *periodic_arguments_ptr = (struct prv_periodic_arguments *)pvPortMalloc(sizeof(struct prv_periodic_arguments));
 
     periodic_arguments_ptr->pxTaskCode = pxTaskCode;
-    periodic_arguments_ptr->tickPeriod = tickPeriod;
-    periodic_arguments_ptr->pvParameters = pvParameters;
+    periodic_arguments_ptr->tickPeriod = periodic_arguments.tickPeriod;
+    periodic_arguments_ptr->pvParameters = periodic_arguments.pvParameters;
 
-    BaseType_t creationAck = xTaskCreate(
-        vPeriodicTask,
-        pcName,
-        uxStackDepth,
-        (void *)periodic_arguments_ptr,
-        uxPriority,
-        pxCreatedTask);
+    BaseType_t creationAck = xTaskCreate(vPeriodicTask,
+                                         pcName,
+                                         uxStackDepth,
+                                         (void *)periodic_arguments_ptr,
+                                         uxPriority,
+                                         pxCreatedTask);
 
     return creationAck;
 }

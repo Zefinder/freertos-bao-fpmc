@@ -4,6 +4,13 @@
 #include <FreeRTOS.h>
 #include <task.h>
 
+// TODO Make documentation
+struct periodic_arguments
+{
+    TickType_t tickPeriod;
+    void *pvParameters;
+};
+
 /*
  * Converts a frequency in hertz to a time in ticks. 
  */
@@ -38,8 +45,7 @@
 BaseType_t xTaskPeriodicCreate(TaskFunction_t pxTaskCode,
                                const char *const pcName,
                                const configSTACK_DEPTH_TYPE uxStackDepth,
-                               const TickType_t tickPeriod,
-                               void *const pvParameters,
+                               const struct periodic_arguments,
                                UBaseType_t uxPriority,
                                TaskHandle_t *const pxCreatedTask);
 
