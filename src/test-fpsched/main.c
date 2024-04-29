@@ -111,12 +111,12 @@ void main_app(void)
 
     int cpu_id = hypercall(HC_GET_CPU_ID, 0, 0, 0);
 
+    struct periodic_arguments periodic_arguments = {.tickPeriod = pdMS_TO_TICKS(1000), .pvParameters = (void *)cpu_id};
     xTaskPeriodicCreate(
         vTask,
         "TestPeriodicTask",
         configMINIMAL_STACK_SIZE,
-        pdMS_TO_TICKS(1000),
-        (void *)cpu_id,
+        periodic_arguments,
         tskIDLE_PRIORITY + 1,
         &(xTaskHandler));
 

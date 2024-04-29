@@ -107,12 +107,12 @@ void vBenchCreationTask(void *pvParameters)
             TaskHandle_t xBenchmarkTaskHandle;
             counter = 0;
             print_counter = 0;
+            struct periodic_arguments periodic_arguments = {.tickPeriod = ticks, .pvParameters = (void *)data_size};
             xTaskPeriodicCreate(
                 vBenchmarkTask,
                 "Execution2Tasks",
                 configMINIMAL_STACK_SIZE,
-                ticks,
-                (void *)data_size,
+                periodic_arguments,
                 tskIDLE_PRIORITY + 1,
                 &(xBenchmarkTaskHandle));
 
@@ -157,12 +157,12 @@ void main_app(void)
     }
     else
     {
+        struct periodic_arguments periodic_arguments = {.tickPeriod = pdFREQ_TO_TICKS(MAX_FREQUENCY), .pvParameters = NULL};
         xTaskPeriodicCreate(
             vMaxFreqTask,
             "Execution2Tasks",
             configMINIMAL_STACK_SIZE,
-            pdFREQ_TO_TICKS(MAX_FREQUENCY),
-            NULL,
+            periodic_arguments,
             tskIDLE_PRIORITY + 1,
             (TaskHandle_t *)NULL);
     }

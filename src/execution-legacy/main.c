@@ -38,7 +38,8 @@ void vTask(void *pvParameters)
         counter += 1;
 
         // Print for each 1000 tests
-        if (++print_counter == 1000) {
+        if (++print_counter == 1000)
+        {
             printf("\t# Number of realised tests: %d\n", counter);
             print_counter = 0;
         }
@@ -60,12 +61,13 @@ void main_app(void)
     start_benchmark();
     init_benchmark(NULL, 0);
 
+    struct periodic_arguments periodic_arguments = {.tickPeriod = pdFREQ_TO_TICKS(frequency), .pvParameters = NULL};
+
     xTaskPeriodicCreate(
         vTask,
         "ExecutionLEGACY",
         configMINIMAL_STACK_SIZE,
-        pdFREQ_TO_TICKS(frequency),
-        NULL,
+        periodic_arguments,
         tskIDLE_PRIORITY + 1,
         (TaskHandle_t *)NULL);
 
