@@ -9,6 +9,7 @@ struct prv_periodic_arguments
     void *pvParameters;
 };
 
+/* The periodic task */
 void vPeriodicTask(void *pvParameters)
 {
     // Getting struct from task parameters and extract task function, period and parameters

@@ -4,7 +4,11 @@
 #include <FreeRTOS.h>
 #include <task.h>
 
-// TODO Make documentation
+/* 
+ * Structure that contains important data for the periodic task: the task's period 
+ * (in tick) and the argument(s) of the task. You do not need to malloc it as it will
+ * be malloc'ed and freed in xTaskPeriodicCreate.
+ */
 struct periodic_arguments
 {
     TickType_t tickPeriod;
@@ -41,6 +45,8 @@ struct periodic_arguments
  * pdFREQ_TO_TICKS to transform a frequency into ticks
  *
  * This is simply creating a task using xTaskCreate but makes it periodic.
+ * 
+ * TODO Notify somewhere that task was not schedulable (Enable tracing?)
  */
 BaseType_t xTaskPeriodicCreate(TaskFunction_t pxTaskCode,
                                const char *const pcName,

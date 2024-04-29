@@ -2,6 +2,10 @@
 #include <FreeRTOS.h>
 #include <task.h>
 #include <periodic_task.h>
+#include <state_machine.h>
+#include <prefetch.h>
+
+// TODO IPI handlers + PREM init
 
 struct prv_premtask_parameters
 {
@@ -11,10 +15,22 @@ struct prv_premtask_parameters
     void *pvParameters;
 };
 
+/* The PREM task */
 void vPREMTask(void *pvParameters)
 {
     // pvParameters are the private PREM struct
     struct prv_premtask_parameters *prv_premtask_parameters = (struct prv_premtask_parameters *)pvParameters;
+
+    // Fetch 
+    change_state(MEMORY_PHASE);
+    prefetch_data(prv_premtask_parameters->data, prv_premtask_parameters->data_size);
+
+    // Compute
+    change_state(COMPUTATION_PHASE);
+    prv_premtask_parameters->pxTaskCode(prv_premtask_parameters->pvParameters);
+
+    // Wait
+    change_state(WAITING);
 }
 
 BaseType_t xTaskPREMCreate(TaskFunction_t pxTaskCode,
