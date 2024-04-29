@@ -41,7 +41,8 @@ struct premtask_parameters
  * Note that you can use pdMS_TO_TICKS to transform a time into ticks and
  * pdFREQ_TO_TICKS to transform a frequency into ticks.
  *
- * This is simply creating a task using xTaskPeriodicCreate but makes it PREM.
+ * This is simply creating a task using xTaskPeriodicCreate but makes it PREM. Don't
+ * forget to run the vInitPREM() before creating a PREM task
  */
 BaseType_t xTaskPREMCreate(TaskFunction_t pxTaskCode,
                            const char *const pcName,
@@ -49,5 +50,14 @@ BaseType_t xTaskPREMCreate(TaskFunction_t pxTaskCode,
                            const struct premtask_parameters premtask_parameters,
                            UBaseType_t uxPriority,
                            TaskHandle_t *const pxCreatedTask);
+
+/*
+ * Init PREM with this function. This is mandatory to do it once before starting PREM
+ * tasks. This function will enable IPI and implement handlers for you! Running this
+ * function more than once is useless... You can of course run PREM task without it, 
+ * but do not exepect IPI and if your task gets suspended, it's for the rest of its
+ * life
+ */
+void vInitPREM();
 
 #endif
