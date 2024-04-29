@@ -131,12 +131,12 @@ void main_app(void)
     start_benchmark();
     init_benchmark(NULL, 0);
 
+    struct periodic_arguments periodic_arguments = {.tickPeriod = pdFREQ_TO_TICKS(frequency), .pvParameters = NULL};
     xTaskPeriodicCreate(
         vTask,
         "ExecutionFPSCHED",
         configMINIMAL_STACK_SIZE,
-        pdFREQ_TO_TICKS(frequency),
-        NULL,
+        periodic_arguments,
         tskIDLE_PRIORITY + 1,
         &(xTaskHandler));
 
