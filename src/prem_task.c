@@ -20,6 +20,8 @@ struct prv_premtask_parameters
 };
 
 volatile int memory_access = 0;
+volatile int hypercalled = 0;
+
 void suspend_task()
 {
     while (!memory_access)
@@ -55,24 +57,44 @@ void vPREMTask(void *pvParameters)
     // pvParameters are the private PREM struct
     struct prv_premtask_parameters *prv_premtask_parameters = (struct prv_premtask_parameters *)pvParameters;
 
-    // Request memory
-    memory_access = request_memory_access(prv_premtask_parameters->priority);
-    if (!memory_access)
+    // Stop scheduler to be sure to not be preempted
+    vTaskSuspendAll();
+
+    // Increment hypercall counter and if it is 1, we request memory (else no)
+    if (++hypercalled == 1)
     {
-        // Suspended state
-        change_state(SUSPENDED);
-        suspend_task();
+        memory_access = request_memory_access(prv_premtask_parameters->priority);
     }
 
-    // Fetch (stop scheduler)
-    vTaskSuspendAll();
-    change_state(MEMORY_PHASE);
-    prefetch_data((uint64_t) prv_premtask_parameters->data, prv_premtask_parameters->data_size);
+    if (!memory_access)
+    {
+        // Suspended state (resume scheduler to allow preemption)
+        change_state(SUSPENDED);
+        xTaskResumeAll();
+        suspend_task();
 
-    // Compute
+        // Stop scheduler again
+        vTaskSuspendAll();
+    }
+
+    // Fetch
+    change_state(MEMORY_PHASE);
+    prefetch_data((uint64_t)prv_premtask_parameters->data, prv_premtask_parameters->data_size);
+
+    // Revoke access and compute
     change_state(COMPUTATION_PHASE);
     revoke_memory_access();
     prv_premtask_parameters->pxTaskCode(prv_premtask_parameters->pvParameters);
+
+    // Decrease hypercall counter and if it is more than 1, we request again (for preempted task)
+    if (--hypercalled)
+    {
+        memory_access = request_memory_access(prv_premtask_parameters->priority);
+    }
+    else
+    {
+        memory_access = 0;
+    }
 
     // Wait (resume scheduler)
     change_state(WAITING);
@@ -117,5 +139,4 @@ void vInitPREM()
     irq_set_handler(IPI_IRQ_RESUME, ipi_resume_handler);
     irq_enable(IPI_IRQ_RESUME);
     irq_set_prio(IPI_IRQ_RESUME, IRQ_MAX_PRIO);
-
 }

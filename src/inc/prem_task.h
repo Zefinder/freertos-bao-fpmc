@@ -34,6 +34,11 @@ struct premtask_parameters
  * while fetching memory or computing. However, if a task of lower priority is
  * suspended and didn't begin its memory phase, then a task of higher priority can
  * take its place. (TODO)
+ * 
+ * Unless you want to break a lot of things, avoid using the vTaskSuspendAll and
+ * xTaskResumeAll functions. If you really want to use them, please use vTaskSuspendAll 
+ * first since during computation phase (the user task) the scheduler is suspended
+ * and resuming it will probably prempt the task and won't do what you wanted to do...
  *
  * There must be no while(1) or for(;;) inside the task to repeat. Since it is an
  * already periodic task, it will repeat until deletion.
