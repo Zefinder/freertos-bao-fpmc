@@ -89,7 +89,7 @@ void vBenchCreationTask(void *pvParameters)
     for (uint64_t data_size = MIN_DATA_SIZE; data_size <= DATA_SIZE; data_size += DATA_SIZE_INCREMENT)
     {
         int no_improve = 0;
-        int nop_number = 0;
+        int nop_number = -1;
         uint64_t min_result = -1;
         while (no_improve < MAX_NO_IMPROVE)
         {
@@ -100,7 +100,7 @@ void vBenchCreationTask(void *pvParameters)
 
             printf("# Start benchmark: frequency=%dHz,data size=%dkB, nop=%d\n", TASK_FREQUENCY, data_size_ko, nop_number);
             char test_name[20];
-            sprintf(test_name, "_%dkB_%dnop", data_size_ko);
+            sprintf(test_name, "_%dkB_%dnop", data_size_ko, nop_number);
             init_benchmark(test_name, 0);
 
             // Create task
@@ -140,7 +140,7 @@ void vBenchCreationTask(void *pvParameters)
             }
         }
 
-        printf("# %d attemps that did not improve results, next!\n");
+        printf("# %d attemps that did not improve results, next!\n", MAX_NO_IMPROVE);
     }
 
     end_benchmark();
