@@ -14,6 +14,9 @@
 #include <periodic_task.h>
 #include <prem_task.h>
 
+// Use default IPI handlers for PREM tasks
+#define DEFAULT_IPI_HANDLERS
+
 // Task handler, change to array for multiple tasks in the future
 TaskHandle_t xTaskHandler;
 

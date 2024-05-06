@@ -28,6 +28,7 @@ void suspend_task()
         ;
 }
 
+#ifdef DEFAULT_IPI_HANDLERS
 void ipi_pause_handler()
 {
     enum states current_state = get_current_state();
@@ -50,6 +51,7 @@ void ipi_resume_handler()
         change_state(MEMORY_PHASE);
     }
 }
+#endif
 
 /* The PREM task */
 void vPREMTask(void *pvParameters)

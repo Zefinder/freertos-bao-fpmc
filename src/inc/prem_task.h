@@ -19,6 +19,20 @@ struct premtask_parameters
 };
 
 /*
+ * IPI pause handler, this function is to define IF you use PREM tasks but you didn't
+ * define DEFAULT_IPI_HANDLERS. 
+ * If DEFAULT_IPI_HANDLERS is defined, then you don't have to do anything
+ */
+void ipi_pause_handler();
+
+/*
+ * IPI resume handler, this function is to define IF you use PREM tasks but you didn't
+ * define DEFAULT_IPI_HANDLERS. 
+ * If DEFAULT_IPI_HANDLERS is defined, then you don't have to do anything
+ */
+void ipi_resume_handler();
+
+/*
  * Create a new PREM task and add it to the list of tasks that are ready to run.
  *
  * A PREM task is a periodic task (cf. periodic_task.h) that has a certain pattern:
