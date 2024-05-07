@@ -13,7 +13,7 @@
 #include <benchmark.h>
 
 #define NUMBER_OF_TESTS 90000
-#define TASK_FREQUENCY 500
+#define TASK_FREQUENCY 1000
 #define MIN_DATA_SIZE 20 * 1024
 #define DATA_SIZE_INCREMENT 20 * 1024
 
@@ -90,7 +90,7 @@ void vBenchCreationTask(void *pvParameters)
     {
         int no_improve = 0;
         int nop_number = -1;
-        uint64_t min_result = -1;
+        uint64_t max_result = -1;
         while (no_improve < MAX_NO_IMPROVE)
         {
             // Add 1 to number of NOP
@@ -126,16 +126,16 @@ void vBenchCreationTask(void *pvParameters)
             vTaskDelete(xBenchmarkTaskHandle);
 
             // Check if improved
-            uint64_t min_run = get_minimum_time();
-            if (min_run < min_result)
+            uint64_t max_run = get_maximum_time();
+            if (max_run < max_result)
             {
-                // Reset the no improve and change minimum
+                // Reset the no improve and change minimum of all max
                 no_improve = 0;
-                min_result = min_run;
+                max_result = max_run;
             }
             else
             {
-                // Else increate the no improve
+                // Else increase the no improve
                 no_improve += 1;
             }
         }
