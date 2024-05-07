@@ -19,20 +19,6 @@ struct premtask_parameters
 };
 
 /*
- * IPI pause handler, this function is to define IF you use PREM tasks but you didn't
- * define DEFAULT_IPI_HANDLERS. 
- * If DEFAULT_IPI_HANDLERS is defined, then you don't have to do anything
- */
-void ipi_pause_handler();
-
-/*
- * IPI resume handler, this function is to define IF you use PREM tasks but you didn't
- * define DEFAULT_IPI_HANDLERS. 
- * If DEFAULT_IPI_HANDLERS is defined, then you don't have to do anything
- */
-void ipi_resume_handler();
-
-/*
  * Create a new PREM task and add it to the list of tasks that are ready to run.
  *
  * A PREM task is a periodic task (cf. periodic_task.h) that has a certain pattern:
@@ -71,11 +57,11 @@ BaseType_t xTaskPREMCreate(TaskFunction_t pxTaskCode,
                            TaskHandle_t *const pxCreatedTask);
 
 /*
- * Init PREM with this function. This is mandatory to do it once before starting PREM
- * tasks. This function will enable IPI and implement handlers for you! Running this
- * function more than once is useless... You can of course run PREM task without it, 
- * but do not exepect IPI and if your task gets suspended, it's for the rest of its
- * life
+ * Init PREM with this function. This is mandatory to do it if you used the DEFAULT_IPI
+ * option. In that case you will need to run it once before starting PREM tasks. This
+ * function will enable IPI and implement handlers for you! Running this function more
+ * than once is useless... You can of course run PREM task without it, but do not exepect
+ * IPI and if your task gets suspended, it's for the rest of its life.
  */
 void vInitPREM();
 

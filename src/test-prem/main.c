@@ -14,9 +14,6 @@
 #include <periodic_task.h>
 #include <prem_task.h>
 
-// Use default IPI handlers for PREM tasks
-#define DEFAULT_IPI_HANDLERS
-
 // Task handler, change to array for multiple tasks in the future
 TaskHandle_t xTaskHandler;
 
@@ -47,6 +44,14 @@ void vTask(void *pvParameters)
 
 struct task_data task1_data, task2_data;
 
+void vTaskB()
+{
+    request_memory_access(0);
+    vTaskDelay(pdMS_TO_TICKS(10000));
+    revoke_memory_access();
+    vTaskDelete(NULL);
+}
+
 void main_app(void)
 {
     uint32_t cpu_id = hypercall(HC_GET_CPU_ID, 0, 0, 0);
@@ -61,6 +66,7 @@ void main_app(void)
     struct premtask_parameters premtask2_parameters = {.tickPeriod = 3 * waiting_ticks, .data = appdata, .data_size = DATA_SIZE, .pvParameters = (void *)&task2_data};
 
     // Init and create PREM task
+    if (cpu_id == 1){
     vInitPREM();
     xTaskPREMCreate(
         vTask,
@@ -77,6 +83,13 @@ void main_app(void)
         premtask2_parameters,
         tskIDLE_PRIORITY + 1,
         &(xTaskHandler));
-
+    } else {
+    xTaskCreate(vTaskB,
+                "Blocked",
+                configMINIMAL_STACK_SIZE,
+                NULL,
+                tskIDLE_PRIORITY + 4,
+                NULL);
+    }
     vTaskStartScheduler();
 }

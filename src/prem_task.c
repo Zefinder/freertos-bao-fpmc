@@ -132,6 +132,8 @@ BaseType_t xTaskPREMCreate(TaskFunction_t pxTaskCode,
 
 void vInitPREM()
 {
+// Only set handlers iff they are defined before
+#ifdef DEFAULT_IPI_HANDLERS
     // Enable IPI pause
     irq_set_handler(IPI_IRQ_PAUSE, ipi_pause_handler);
     irq_enable(IPI_IRQ_PAUSE);
@@ -141,4 +143,5 @@ void vInitPREM()
     irq_set_handler(IPI_IRQ_RESUME, ipi_resume_handler);
     irq_enable(IPI_IRQ_RESUME);
     irq_set_prio(IPI_IRQ_RESUME, IRQ_MAX_PRIO);
+#endif
 }

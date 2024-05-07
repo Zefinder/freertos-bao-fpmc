@@ -43,4 +43,7 @@ C_SRC+=$(addprefix $(arch_dir)/, $(arch_c_srcs))
 ASM_SRC+=$(addprefix $(arch_dir)/, $(arch_s_srcs))
 
 # Include the final baremetal-runtime build
+ifneq ($(DEFAULT_IPI),)
+CPPFLAGS+=-DDEFAULT_IPI_HANDLERS
+endif
 include $(bmrt_dir)/build.mk
