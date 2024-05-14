@@ -17,7 +17,7 @@
 #define MIN_DATA_SIZE 20 * 1024
 #define DATA_SIZE_INCREMENT 20 * 1024
 
-#define MAX_NO_IMPROVE 3
+#define MAX_NOP 10
 #define PREFETCH_BATCH_SIZE 0x40
 
 // Structure for task
@@ -88,13 +88,7 @@ void vBenchCreationTask(void *pvParameters)
     // For each size you test with multiple NOPs
     for (uint64_t data_size = MIN_DATA_SIZE; data_size <= DATA_SIZE; data_size += DATA_SIZE_INCREMENT)
     {
-        int no_improve = 0;
-        int nop_number = -1;
-        uint64_t max_result = -1;
-        while (no_improve < MAX_NO_IMPROVE)
-        {
-            // Add 1 to number of NOP
-            nop_number += 1;
+        for (int nop_number = 0; nop_number < MAX_NOP; nop_number++) {
             uint32_t ulNotifiedValue;
             int data_size_ko = data_size / 1024;
 
@@ -124,23 +118,7 @@ void vBenchCreationTask(void *pvParameters)
 
             // Kill the task
             vTaskDelete(xBenchmarkTaskHandle);
-
-            // Check if improved
-            uint64_t max_run = get_maximum_time();
-            if (max_run < max_result)
-            {
-                // Reset the no improve and change minimum of all max
-                no_improve = 0;
-                max_result = max_run;
-            }
-            else
-            {
-                // Else increase the no improve
-                no_improve += 1;
-            }
         }
-
-        printf("# %d attemps that did not improve results, next!\n", MAX_NO_IMPROVE);
     }
 
     end_benchmark();
