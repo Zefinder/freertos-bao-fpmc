@@ -1,6 +1,10 @@
 #ifndef __BENCHMARK_H__
 #define __BENCHMARK_H__
 
+/* Defines the measurement unit for benchmarks */
+#define MEASURE_NANO 1
+#define MEASURE_MICRO 0
+
 /* Defines the prototype to which benchmark functions must conform */
 typedef void (*benchmark_t)(void*);
 
