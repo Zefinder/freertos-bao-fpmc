@@ -13,8 +13,8 @@ uint64_t generic_timer_read_counter(void)
 	unsigned long cntpct;
 
     // Flush instruction pipeline as counter can be read before increment
-    asm volatile("isb");
-	asm volatile("mrs %0, cntpct_el0" : "=r" (cntpct));
+    __asm__ volatile("isb");
+	__asm__ volatile("mrs %0, cntpct_el0" : "=r" (cntpct));
 
 	return cntpct;
 }

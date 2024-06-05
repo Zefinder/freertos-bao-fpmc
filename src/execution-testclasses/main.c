@@ -11,15 +11,14 @@
 #include <prefetch.h>
 #include <state_machine.h>
 #include <benchmark.h>
+#include <data.h>
 
 #define NUMBER_OF_TESTS 90000
 #define TASK_FREQUENCY 500
-#define MIN_DATA_SIZE 20 * 1024
-#define DATA_SIZE_INCREMENT 20 * 1024
+#define MIN_DATA_SIZE 20 kB
+#define DATA_SIZE_INCREMENT 20 kB
+#define DATA_SIZE (440 kB)
 
-// Change location for appdata
-#define DATA_SIZE (440 * 1024)
-uint8_t appdata[DATA_SIZE] = {[0 ... DATA_SIZE - 1] = 1};
 TaskHandle_t xTaskCreatorHandler;
 
 void prefetch_memory(void *data_size)
@@ -71,7 +70,7 @@ void vBenchCreationTask(void *pvParameters)
     for (uint64_t data_size = MIN_DATA_SIZE; data_size <= DATA_SIZE; data_size += DATA_SIZE_INCREMENT)
     {
         uint32_t ulNotifiedValue;
-        int data_size_ko = data_size / 1024;
+        int data_size_ko = BtkB(data_size);
 
         printf("# Start benchmark: frequency=%dHz,data size=%dkB\n", TASK_FREQUENCY, data_size_ko);
         char test_name[10];
@@ -116,7 +115,7 @@ void vBenchCreationTask(void *pvParameters)
 
 void main_app(void)
 {
-    printf("Begin class determination tests (%d Hz, prefetch %dkB to %dkB)...\n", TASK_FREQUENCY, MIN_DATA_SIZE / 1024, DATA_SIZE / 1024);
+    printf("Begin class determination tests (%d Hz, prefetch %dkB to %dkB)...\n", TASK_FREQUENCY, BtkB(MIN_DATA_SIZE), BtkB(DATA_SIZE));
     xTaskCreate(vBenchCreationTask,
                 "Benchmark creator",
                 configMINIMAL_STACK_SIZE,

@@ -13,13 +13,13 @@
 #include <ipi.h>
 #include <periodic_task.h>
 #include <prem_task.h>
+#include <data.h>
 
 // Task handler, change to array for multiple tasks in the future
 TaskHandle_t xTaskHandler;
 
 // Change location for appdata
-#define DATA_SIZE 448 * 1024
-uint8_t appdata[DATA_SIZE] = {[0 ... DATA_SIZE - 1] = 1};
+#define DATA_SIZE 448 kB
 
 struct task_data
 {
@@ -27,7 +27,7 @@ struct task_data
     uint32_t task_id;
 };
 
-void vTask(void *pvParameters)
+void vTaskHypercall(void *pvParameters)
 {
     struct task_data *task_data = (struct task_data *)pvParameters;
 
@@ -69,7 +69,7 @@ void main_app(void)
     if (cpu_id == 1){
     vInitPREM();
     xTaskPREMCreate(
-        vTask,
+        vTaskHypercall,
         "TestPREMTask1",
         configMINIMAL_STACK_SIZE,
         premtask1_parameters,
@@ -77,7 +77,7 @@ void main_app(void)
         &(xTaskHandler));
 
     xTaskPREMCreate(
-        vTask,
+        vTaskHypercall,
         "TestPREMTask2",
         configMINIMAL_STACK_SIZE,
         premtask2_parameters,

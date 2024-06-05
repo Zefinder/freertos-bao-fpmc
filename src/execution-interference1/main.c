@@ -112,7 +112,7 @@ void vBenchCreationTask(void *pvParameters)
 
 void main_app(void)
 {
-    printf("Begin solo prefetch time tests (%d Hz, prefetch %dkB to %dkB)...\n", TASK_FREQUENCY, BtkB(MIN_DATA_SIZE), BtkB(DATA_SIZE));
+    printf("Begin 1 interference prefetch time tests (%d Hz, prefetch %dkB to %dkB)...\n", TASK_FREQUENCY, BtkB(MIN_DATA_SIZE), BtkB(DATA_SIZE));
     xTaskCreate(vBenchCreationTask,
                 "Benchmark creator",
                 configMINIMAL_STACK_SIZE,

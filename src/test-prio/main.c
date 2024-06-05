@@ -11,7 +11,7 @@
 
 // TODO Use vTaskSuspendAll() to enter "Critical sections" since it'll stop the scheduler BUT keeping the interruptions (ENTER_CRITICAL do not)  
 
-void vTask(void *pvParameters)
+void vTaskHypercall(void *pvParameters)
 {
     int task_id = (int)pvParameters;
     printf("Task %d in action!\n", task_id);
@@ -59,7 +59,7 @@ void main_app(void)
     irq_enable(UART_IRQ_ID);
 
     xTaskCreate(
-        vTask,
+        vTaskHypercall,
         "TestTask1",
         configMINIMAL_STACK_SIZE,
         (void *)1,
@@ -75,7 +75,7 @@ void main_app(void)
         (TaskHandle_t *)NULL);
 
     xTaskCreate(
-        vTask,
+        vTaskHypercall,
         "TestTask3",
         configMINIMAL_STACK_SIZE,
         (void *)3,

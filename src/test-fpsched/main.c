@@ -10,13 +10,13 @@
 #include <state_machine.h>
 #include <ipi.h>
 #include <periodic_task.h>
+#include <data.h>
 
 // Task handler, change to array for multiple tasks in the future
 TaskHandle_t xTaskHandler;
 
 // Change location for appdata
-#define DATA_SIZE 448 * 1024
-uint8_t appdata[DATA_SIZE] = {1};
+#define DATA_SIZE 448 kB
 
 void prefetch_memory()
 {
@@ -24,7 +24,7 @@ void prefetch_memory()
     prefetch_data((uint64_t)appdata, DATA_SIZE);
 }
 
-void vTask(void *pvParameters)
+void vTaskHypercall(void *pvParameters)
 {
     int cpu_id = (int *)pvParameters;
 
@@ -113,7 +113,7 @@ void main_app(void)
 
     struct periodic_arguments periodic_arguments = {.tickPeriod = pdMS_TO_TICKS(1000), .pvParameters = (void *)cpu_id};
     xTaskPeriodicCreate(
-        vTask,
+        vTaskHypercall,
         "TestPeriodicTask",
         configMINIMAL_STACK_SIZE,
         periodic_arguments,

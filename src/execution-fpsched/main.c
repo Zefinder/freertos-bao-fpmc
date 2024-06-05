@@ -11,6 +11,7 @@
 #include <prefetch.h>
 #include <state_machine.h>
 #include <benchmark.h>
+#include <data.h>
 
 // Task handler, change to array for multiple tasks in the future
 TaskHandle_t xTaskHandler;
@@ -19,8 +20,7 @@ TaskHandle_t xTaskHandler;
 #define NUMBER_OF_TESTS 90000
 
 // Change location for appdata
-#define DATA_SIZE 200 * 1024
-uint8_t appdata[DATA_SIZE] = {1};
+#define DATA_SIZE 200 kB
 
 void prefetch_memory()
 {
@@ -30,7 +30,7 @@ void prefetch_memory()
 
 int counter = 0;
 int print_counter = 0;
-void vTask(void *pvParameters)
+void vTaskHypercall(void *pvParameters)
 {
     if (counter < NUMBER_OF_TESTS)
     {
@@ -133,7 +133,7 @@ void main_app(void)
 
     struct periodic_arguments periodic_arguments = {.tickPeriod = pdFREQ_TO_TICKS(frequency), .pvParameters = NULL};
     xTaskPeriodicCreate(
-        vTask,
+        vTaskHypercall,
         "ExecutionFPSCHED",
         configMINIMAL_STACK_SIZE,
         periodic_arguments,

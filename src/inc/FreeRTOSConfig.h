@@ -30,7 +30,7 @@
 #ifndef _FREERTOSCONFIG_H
 #define _FREERTOSCONFIG_H
 
-#define configUSE_PREEMPTION 1
+#define configUSE_PREEMPTION 0
 
 #define configUSE_MUTEXES 1
 

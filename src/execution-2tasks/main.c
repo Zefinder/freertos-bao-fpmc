@@ -11,17 +11,17 @@
 #include <prefetch.h>
 #include <state_machine.h>
 #include <benchmark.h>
+#include <data.h>
 
 #define CPU_MASTER 0
 #define NUMBER_OF_TESTS 90000
 #define MIN_FREQUENCY 100
 #define MAX_FREQUENCY 300
-#define MIN_DATA_SIZE 40 * 1024
-#define DATA_SIZE_INCREMENT 40 * 1024
+#define MIN_DATA_SIZE 40 kB
+#define DATA_SIZE_INCREMENT 40 kB
 
 // Change location for appdata
-#define DATA_SIZE (440 * 1024)
-uint8_t appdata[DATA_SIZE] = {1};
+#define DATA_SIZE (440 kB)
 
 TaskHandle_t xTaskCreatorHandler;
 
@@ -30,7 +30,6 @@ int end_tests = 0;
 
 void prefetch_memory(void *data_size)
 {
-    // TODO Create random app data
     prefetch_data((uint64_t)appdata, (uint64_t)data_size);
 }
 
@@ -41,7 +40,6 @@ void vMaxFreqTask(void *pvParameters)
     prefetch_memory((void *)DATA_SIZE);
 
     // Destroy task when all tests ended
-    // TODO Use IPI interruption
     if (end_tests)
     {
         vTaskDelete(NULL);
@@ -97,7 +95,7 @@ void vBenchCreationTask(void *pvParameters)
         {
             uint32_t ulNotifiedValue;
             int frequency = configTICK_RATE_HZ / ticks;
-            int data_size_ko = data_size / 1024;
+            int data_size_ko = BtkB(data_size);
 
             printf("# Start benchmark: frequency=%dHz,data size=%dkB\n", frequency, data_size_ko);
             char test_name[20];
@@ -147,7 +145,7 @@ void main_app(void)
 
     if (cpu_number == CPU_MASTER)
     {
-        printf("Begin 2 tasks tests (from %dHz to %dHz, prefetch %dkB to %dkB)...\n", MIN_FREQUENCY, MAX_FREQUENCY, MIN_DATA_SIZE / 1024, DATA_SIZE / 1024);
+        printf("Begin 2 tasks tests (from %dHz to %dHz, prefetch %dkB to %dkB)...\n", MIN_FREQUENCY, MAX_FREQUENCY, BtkB(MIN_DATA_SIZE), BtkB(DATA_SIZE));
         xTaskCreate(vBenchCreationTask,
                     "Benchmark creator",
                     configMINIMAL_STACK_SIZE,

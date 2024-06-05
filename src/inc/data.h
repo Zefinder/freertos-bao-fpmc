@@ -7,7 +7,7 @@
 #define GB MB*1024
 
 /* Kilobyte from byte value */
-#define BtkB(size) (size/1024)
+#define BtkB(size) (size / 1024)
 
 // Application data
 #define MAX_DATA_SIZE 512 kB
