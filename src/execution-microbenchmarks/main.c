@@ -14,7 +14,7 @@
 #include <data.h>
 #include <generic_timer.h>
 
-#define NUMBER_OF_TESTS 90000
+#define NUMBER_OF_TESTS 1000000
 #ifdef configUSE_PREEMPTION
     #if configUSE_PREEMPTION == 1
         #error Preemption must be disabled for this test... put configUSE_PREEMPTION to 0 in FreeRTOSConfig.h
@@ -132,7 +132,12 @@ void vArbitrationTask(void *pvParameters)
             }
 
             // Print the result
-            printf("%ld, ", pdSYSTICK_TO_NS(base_frequency, arbitration_time));
+            printf("%ld,", pdSYSTICK_TO_NS(base_frequency, arbitration_time));
+			if (++print_counter == 1000)
+			{
+				printf("\t# Number of realised tests: %d\n", counter);
+				print_counter = 0;
+			}
         }
 
         // Compute average
