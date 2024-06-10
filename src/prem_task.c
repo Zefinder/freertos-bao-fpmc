@@ -7,9 +7,9 @@
 #include <hypervisor.h>
 #include <ipi.h>
 #include <irq.h>
+#include <generic_timer.h>
 
-// TODO IPI handlers + PREM init
-
+/* PREM task parameters that are really used in the task */
 struct prv_premtask_parameters
 {
     TaskFunction_t pxTaskCode;
@@ -19,12 +19,25 @@ struct prv_premtask_parameters
     void *pvParameters;
 };
 
-volatile int memory_access = 0;
+/* Answer of hypervisor after a memory request */
+union memory_request_answer
+{
+    struct
+    {
+        uint64_t ack:1;     // 0 = no, 1 = yes
+        uint64_t ttw:63;    // Time to wait in case of no (0 = no waiting, just not prio)
+    } answer;
+    uint64_t raw;
+};
+
+volatile union memory_request_answer memory_access = {.raw = 0};
 volatile int hypercalled = 0;
+
+uint64_t sysfreq = 0;
 
 void suspend_task()
 {
-    while (!memory_access)
+    while (!memory_access.raw)
         ;
 }
 
@@ -36,7 +49,7 @@ void ipi_pause_handler()
     {
         // Pause task
         change_state(SUSPENDED);
-        memory_access = 0;
+        memory_access.raw = 0;
         suspend_task();
     }
 }
@@ -46,12 +59,14 @@ void ipi_resume_handler()
     enum states current_state = get_current_state();
     if (current_state == SUSPENDED)
     {
-        // Pause task
-        memory_access = 1;
+        // Resume task
+        memory_access.raw = 1;
         change_state(MEMORY_PHASE);
     }
 }
 #endif
+
+// MEMORY_REQUEST_WAIT
 
 /* The PREM task */
 void vPREMTask(void *pvParameters)
@@ -65,11 +80,34 @@ void vPREMTask(void *pvParameters)
     // Increment hypercall counter and if it is 1, we request memory (else no)
     if (++hypercalled == 1)
     {
-        memory_access = request_memory_access(prv_premtask_parameters->priority);
+        memory_access.raw = request_memory_access(prv_premtask_parameters->priority);
     }
 
-    if (!memory_access)
+    // When memory access wait is defined, memory ack 1 is the only yes value
+    if (memory_access.raw != 1)
     {
+    #ifdef MEMORY_REQUEST_WAIT
+        // If time to wait > 0, then hypervisor wants us to wait for a bit...
+        // Just wait, no need to enable the scheduler since all hypercall will result in wait
+        uint64_t ttw = memory_access.answer.ttw;
+        if (ttw != 0)
+        {
+            // Transform systicks into FreeRTOS ticks
+            uint64_t waiting_ticks = pdSYSTICK_TO_TICK(sysfreq, ttw);
+
+            // TODO: THIS IS ONLY FOR DEBUG
+            printf("You need to calm down! Here, wait for %ld ticks (%ld ms) (CPU %d)\n", ttw, pdTICKS_TO_MS(waiting_ticks), hypercall(HC_GET_CPU_ID, 0, 0, 0));
+
+            // Wait for this duration and then make an hypercall
+            vTaskDelay(waiting_ticks);
+            memory_access.raw = request_memory_access(prv_premtask_parameters->priority);
+
+            // Even if the answer is 1, we re-enable the scheduler since the task was waiting!
+            // Maybe a higher priority task is ready, we need to verify that! 
+            // Even if no task is waiting, it's only losing a few cycles so it's ok
+        }
+    #endif
+
         // Suspended state (resume scheduler to allow preemption)
         change_state(SUSPENDED);
         xTaskResumeAll();
@@ -91,11 +129,22 @@ void vPREMTask(void *pvParameters)
     // Decrease hypercall counter and if it is more than 1, we request again (for preempted task)
     if (--hypercalled)
     {
-        memory_access = request_memory_access(prv_premtask_parameters->priority);
+        memory_access.raw = request_memory_access(prv_premtask_parameters->priority);
+
+    #ifdef MEMORY_REQUEST_WAIT
+        // Same thing here, if the hypervisor wants to wait, then we wait... instead of giving the hand.
+        // This allows to not put these checks in handlers and allow new tasks to arrive
+        uint64_t ttw = memory_access.answer.ttw;
+        if (ttw != 0)
+        {
+            // Transform systicks into FreeRTOS ticks
+            uint64_t waiting_ticks = pdSYSTICK_TO_TICK(sysfreq, ttw);
+        }
+    #endif
     }
     else
     {
-        memory_access = 0;
+        memory_access.raw = 0;
     }
 
     // Wait (resume scheduler)
@@ -143,5 +192,10 @@ void vInitPREM()
     irq_set_handler(IPI_IRQ_RESUME, ipi_resume_handler);
     irq_enable(IPI_IRQ_RESUME);
     irq_set_prio(IPI_IRQ_RESUME, IRQ_MAX_PRIO);
+#endif
+
+#ifdef MEMORY_REQUEST_WAIT
+    // Get system freq
+    sysfreq = generic_timer_get_freq();
 #endif
 }

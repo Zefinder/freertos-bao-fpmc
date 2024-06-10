@@ -43,7 +43,13 @@ C_SRC+=$(addprefix $(arch_dir)/, $(arch_c_srcs))
 ASM_SRC+=$(addprefix $(arch_dir)/, $(arch_s_srcs))
 
 # Include the final baremetal-runtime build
+# Add default IPI handlers for PREM define
 ifneq ($(DEFAULT_IPI),)
 CPPFLAGS+=-DDEFAULT_IPI_HANDLERS
+endif
+
+# Enable PREM memory request waiting time
+ifneq ($(MEMORY_REQUEST_WAIT),)
+CPPFLAGS+=-DMEMORY_REQUEST_WAIT
 endif
 include $(bmrt_dir)/build.mk
