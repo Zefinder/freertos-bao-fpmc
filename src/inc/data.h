@@ -11,6 +11,11 @@
 
 // Application data
 #define MAX_DATA_SIZE 512 kB
+
+#include <appdata.h>
+
+#ifndef __APPDATA_H__
 uint8_t appdata[MAX_DATA_SIZE] = {[0 ... MAX_DATA_SIZE - 1] = 1};
+#endif
 
 #endif
