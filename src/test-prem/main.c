@@ -15,6 +15,14 @@
 #include <prem_task.h>
 #include <data.h>
 
+// Request the default IPI and memory request wait
+#ifndef DEFAULT_IPI_HANDLERS
+        #error DEFAULT_IPI_HANDLERS must be defined with value y for this test (make all ... DEFAULT_IPI_HANDLERS=y)
+#endif
+#ifndef MEMORY_REQUEST_WAIT
+        #error MEMORY_REQUEST_WAIT must be defined with value y for this test (make all ... MEMORY_REQUEST_WAIT=y)
+#endif
+
 // Task handler, change to array for multiple tasks in the future
 TaskHandle_t xTaskHandler;
 

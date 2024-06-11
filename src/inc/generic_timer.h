@@ -20,6 +20,13 @@
 #define pdSYSTICK_TO_US(sysfreq, tickCounter) (((uint64_t) tickCounter * (uint64_t) 1000000) / (uint64_t) sysfreq)
 
 /* 
+ * Converts the time in systicks to a time in microseconds. Your results can
+ * be troncated a lot if the tickCounter number you put is too small, if it
+ * is the case use pdSYSTICK_TO_NS
+ */
+#define pdSYSTICK_TO_MS(sysfreq, tickCounter) (((uint64_t) tickCounter * (uint64_t) 1000) / (uint64_t) sysfreq)
+
+/* 
  * Converts the time in systicks to a time in FreeRTOS ticks. The result will
  * surely be truncated, but it is the price to pay to be able to delay a task
  * for an amount of time determined by the generic timer. You can of course 

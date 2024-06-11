@@ -24,9 +24,9 @@ union memory_request_answer
 {
     struct
     {
-        uint64_t ack:1;     // 0 = no, 1 = yes
-        uint64_t ttw:63;    // Time to wait in case of no (0 = no waiting, just not prio)
-    } answer;
+        uint64_t ack : 1;  // 0 = no, 1 = yes
+        uint64_t ttw : 63; // Time to wait in case of no (0 = no waiting, just not prio)
+    };
     uint64_t raw;
 };
 
@@ -41,6 +41,21 @@ void suspend_task()
         ;
 }
 
+#ifdef MEMORY_REQUEST_WAIT
+/* Waits for ttw systick ticks */
+void wait_for(uint64_t ttw)
+{
+    // Because the scheduler is disabled, we can't use vTaskDelay
+    // TODO Look for setting a timer
+    uint64_t current_time = generic_timer_read_counter();
+    uint64_t end_time = current_time + ttw;
+    while (current_time < end_time)
+    {
+        current_time = generic_timer_read_counter();
+    }
+}
+#endif
+
 #ifdef DEFAULT_IPI_HANDLERS
 void ipi_pause_handler()
 {
@@ -51,6 +66,10 @@ void ipi_pause_handler()
         change_state(SUSPENDED);
         memory_access.raw = 0;
         suspend_task();
+    }
+    else
+    {
+        printf("CPU 1 is not in MEMORY_PHASE...\n");
     }
 }
 
@@ -65,8 +84,6 @@ void ipi_resume_handler()
     }
 }
 #endif
-
-// MEMORY_REQUEST_WAIT
 
 /* The PREM task */
 void vPREMTask(void *pvParameters)
@@ -86,27 +103,25 @@ void vPREMTask(void *pvParameters)
     // When memory access wait is defined, memory ack 1 is the only yes value
     if (memory_access.raw != 1)
     {
-    #ifdef MEMORY_REQUEST_WAIT
+#ifdef MEMORY_REQUEST_WAIT
         // If time to wait > 0, then hypervisor wants us to wait for a bit...
         // Just wait, no need to enable the scheduler since all hypercall will result in wait
-        uint64_t ttw = memory_access.answer.ttw;
+        uint64_t ttw = memory_access.ttw;
         if (ttw != 0)
         {
-            // Transform systicks into FreeRTOS ticks
-            uint64_t waiting_ticks = pdSYSTICK_TO_TICK(sysfreq, ttw);
-
             // TODO: THIS IS ONLY FOR DEBUG
-            printf("You need to calm down! Here, wait for %ld ticks (%ld ms) (CPU %d)\n", ttw, pdTICKS_TO_MS(waiting_ticks), hypercall(HC_GET_CPU_ID, 0, 0, 0));
+            printf("You need to calm down! Here, wait for %ld ticks (%ld ms) (CPU %d)\n", ttw, pdSYSTICK_TO_MS(sysfreq, ttw), hypercall(HC_GET_CPU_ID, 0, 0, 0));
+            printf("answer=%ld (ack=%d, ttw=%ld)\n", memory_access.raw, memory_access.ack, memory_access.ttw);
 
             // Wait for this duration and then make an hypercall
-            vTaskDelay(waiting_ticks);
+            wait_for(ttw);
             memory_access.raw = request_memory_access(prv_premtask_parameters->priority);
 
             // Even if the answer is 1, we re-enable the scheduler since the task was waiting!
-            // Maybe a higher priority task is ready, we need to verify that! 
+            // Maybe a higher priority task is ready, we need to verify that!
             // Even if no task is waiting, it's only losing a few cycles so it's ok
         }
-    #endif
+#endif
 
         // Suspended state (resume scheduler to allow preemption)
         change_state(SUSPENDED);
@@ -131,16 +146,23 @@ void vPREMTask(void *pvParameters)
     {
         memory_access.raw = request_memory_access(prv_premtask_parameters->priority);
 
-    #ifdef MEMORY_REQUEST_WAIT
+#ifdef MEMORY_REQUEST_WAIT
         // Same thing here, if the hypervisor wants to wait, then we wait... instead of giving the hand.
         // This allows to not put these checks in handlers and allow new tasks to arrive
-        uint64_t ttw = memory_access.answer.ttw;
+        uint64_t ttw = memory_access.ttw;
         if (ttw != 0)
         {
-            // Transform systicks into FreeRTOS ticks
-            uint64_t waiting_ticks = pdSYSTICK_TO_TICK(sysfreq, ttw);
+            // TODO: THIS IS ONLY FOR DEBUG
+            printf("Hypercall for waiting task too fast! Here, wait for %ld ticks (%ld ms) (CPU %d)\n", ttw, pdSYSTICK_TO_MS(sysfreq, ttw), hypercall(HC_GET_CPU_ID, 0, 0, 0));
+            printf("answer=%ld (ack=%d, ttw=%ld)\n", memory_access.raw, memory_access.ack, memory_access.ttw);
+
+            // Wait for this duration and then make an hypercall
+            wait_for(ttw);
+            memory_access.raw = request_memory_access(prv_premtask_parameters->priority);
+
+            // This task exits and made a memory request for the next one and is sure that it didn't ask too fast
         }
-    #endif
+#endif
     }
     else
     {
