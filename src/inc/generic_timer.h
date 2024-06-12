@@ -20,11 +20,16 @@
 #define pdSYSTICK_TO_US(sysfreq, tickCounter) (((uint64_t) tickCounter * (uint64_t) 1000000) / (uint64_t) sysfreq)
 
 /* 
- * Converts the time in systicks to a time in microseconds. Your results can
+ * Converts the time in systicks to a time in milliseconds. Your results can
  * be troncated a lot if the tickCounter number you put is too small, if it
- * is the case use pdSYSTICK_TO_NS
+ * is the case use pdSYSTICK_TO_US
  */
 #define pdSYSTICK_TO_MS(sysfreq, tickCounter) (((uint64_t) tickCounter * (uint64_t) 1000) / (uint64_t) sysfreq)
+
+/* 
+ * Converts the time in milliseconds to a time in systicks
+ */
+#define pdMS_TO_SYSTICK(sysfreq, time) (((uint64_t) time * (uint64_t) sysfreq) / (uint64_t) 1000)
 
 /* 
  * Converts the time in systicks to a time in FreeRTOS ticks. The result will
@@ -32,7 +37,9 @@
  * for an amount of time determined by the generic timer. You can of course 
  * do +1 to be sure that you don't underwait 
  */
-#define pdSYSTICK_TO_TICK(sysfreq, tickCounter) (pdMS_TO_TICKS(((uint64_t) tickCounter * (uint64_t) 1000) / (uint64_t) sysfreq))
+#define pdSYSTICK_TO_TICKS(sysfreq, tickCounter) (pdMS_TO_TICKS(pdSYSTICK_TO_MS(sysfreq, tickCounter)))
+
+#define pdTICKS_TO_SYSTICK(sysfreq, tickCounter) (pdMS_TO_SYSTICK(sysfreq, pdTICKS_TO_MS(tickCounter)))
 
 /* Returns the frequency of the generic timer */
 uint64_t generic_timer_get_freq(void);

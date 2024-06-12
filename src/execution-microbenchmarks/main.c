@@ -14,7 +14,7 @@
 #include <data.h>
 #include <generic_timer.h>
 
-#define NUMBER_OF_TESTS 1000000
+#define NUMBER_OF_TESTS 1000
 #ifdef configUSE_PREEMPTION
     #if configUSE_PREEMPTION == 1
         #error Preemption must be disabled for this test... put configUSE_PREEMPTION to 0 in FreeRTOSConfig.h
@@ -36,6 +36,7 @@ void empty_handler()
 void ipi_handler()
 {
     ipi_received = 1;
+    printf("AAAAAAAH\n");
 }
 
 void bench_hypercall(void *benchmark_argument)

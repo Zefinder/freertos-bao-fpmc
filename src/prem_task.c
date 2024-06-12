@@ -8,6 +8,7 @@
 #include <ipi.h>
 #include <irq.h>
 #include <generic_timer.h>
+#include <stdio.h>
 
 /* PREM task parameters that are really used in the task */
 struct prv_premtask_parameters
@@ -17,17 +18,6 @@ struct prv_premtask_parameters
     void *data;
     uint32_t priority;
     void *pvParameters;
-};
-
-/* Answer of hypervisor after a memory request */
-union memory_request_answer
-{
-    struct
-    {
-        uint64_t ack : 1;  // 0 = no, 1 = yes
-        uint64_t ttw : 63; // Time to wait in case of no (0 = no waiting, just not prio)
-    };
-    uint64_t raw;
 };
 
 volatile union memory_request_answer memory_access = {.raw = 0};
@@ -59,6 +49,7 @@ void wait_for(uint64_t ttw)
 #ifdef DEFAULT_IPI_HANDLERS
 void ipi_pause_handler()
 {
+    printf("Please register the IPI PAUSE interrupt ;(\n");
     enum states current_state = get_current_state();
     if (current_state == MEMORY_PHASE)
     {
@@ -75,6 +66,7 @@ void ipi_pause_handler()
 
 void ipi_resume_handler()
 {
+    printf("Please register the IPI RESUME interrupt ;(\n");
     enum states current_state = get_current_state();
     if (current_state == SUSPENDED)
     {
@@ -82,10 +74,24 @@ void ipi_resume_handler()
         memory_access.raw = 1;
         change_state(MEMORY_PHASE);
     }
+    else
+    {
+        printf("CPU 1 is not in SUSPENDED state...\n");
+    }
+
 }
 #endif
 
-/* The PREM task */
+void vTaskPREMDelay(TickType_t waitingTicks)
+{
+    uint64_t current_time = generic_timer_read_counter();
+    uint64_t end_time = current_time + pdTICKS_TO_SYSTICK(sysfreq, waitingTicks);
+    while (current_time < end_time)
+    {
+        current_time = generic_timer_read_counter();
+    }
+}
+
 void vPREMTask(void *pvParameters)
 {
     // pvParameters are the private PREM struct
@@ -106,15 +112,11 @@ void vPREMTask(void *pvParameters)
 #ifdef MEMORY_REQUEST_WAIT
         // If time to wait > 0, then hypervisor wants us to wait for a bit...
         // Just wait, no need to enable the scheduler since all hypercall will result in wait
-        uint64_t ttw = memory_access.ttw;
-        if (ttw != 0)
+        // If you waited to short, then rewait
+        while (memory_access.ttw != 0)
         {
-            // TODO: THIS IS ONLY FOR DEBUG
-            printf("You need to calm down! Here, wait for %ld ticks (%ld ms) (CPU %d)\n", ttw, pdSYSTICK_TO_MS(sysfreq, ttw), hypercall(HC_GET_CPU_ID, 0, 0, 0));
-            printf("answer=%ld (ack=%d, ttw=%ld)\n", memory_access.raw, memory_access.ack, memory_access.ttw);
-
             // Wait for this duration and then make an hypercall
-            wait_for(ttw);
+            wait_for(memory_access.ttw);
             memory_access.raw = request_memory_access(prv_premtask_parameters->priority);
 
             // Even if the answer is 1, we re-enable the scheduler since the task was waiting!
@@ -149,15 +151,10 @@ void vPREMTask(void *pvParameters)
 #ifdef MEMORY_REQUEST_WAIT
         // Same thing here, if the hypervisor wants to wait, then we wait... instead of giving the hand.
         // This allows to not put these checks in handlers and allow new tasks to arrive
-        uint64_t ttw = memory_access.ttw;
-        if (ttw != 0)
+        while (memory_access.ack == 0 && memory_access.ttw != 0)
         {
-            // TODO: THIS IS ONLY FOR DEBUG
-            printf("Hypercall for waiting task too fast! Here, wait for %ld ticks (%ld ms) (CPU %d)\n", ttw, pdSYSTICK_TO_MS(sysfreq, ttw), hypercall(HC_GET_CPU_ID, 0, 0, 0));
-            printf("answer=%ld (ack=%d, ttw=%ld)\n", memory_access.raw, memory_access.ack, memory_access.ttw);
-
             // Wait for this duration and then make an hypercall
-            wait_for(ttw);
+            wait_for(memory_access.ttw);
             memory_access.raw = request_memory_access(prv_premtask_parameters->priority);
 
             // This task exits and made a memory request for the next one and is sure that it didn't ask too fast
@@ -205,19 +202,19 @@ void vInitPREM()
 {
 // Only set handlers iff they are defined before
 #ifdef DEFAULT_IPI_HANDLERS
-    // Enable IPI pause
-    irq_set_handler(IPI_IRQ_PAUSE, ipi_pause_handler);
-    irq_enable(IPI_IRQ_PAUSE);
-    irq_set_prio(IPI_IRQ_PAUSE, IRQ_MAX_PRIO);
+    // // Enable IPI pause
+    // irq_set_handler(IPI_IRQ_PAUSE, ipi_pause_handler);
+    // irq_enable(IPI_IRQ_PAUSE);
+    // irq_set_prio(IPI_IRQ_PAUSE, IRQ_MAX_PRIO);
 
-    // Enable IPI resume
-    irq_set_handler(IPI_IRQ_RESUME, ipi_resume_handler);
-    irq_enable(IPI_IRQ_RESUME);
-    irq_set_prio(IPI_IRQ_RESUME, IRQ_MAX_PRIO);
+    // // Enable IPI resume
+    // irq_set_handler(IPI_IRQ_RESUME, ipi_resume_handler);
+    // irq_enable(IPI_IRQ_RESUME);
+    // irq_set_prio(IPI_IRQ_RESUME, IRQ_MAX_PRIO);
+
+    printf("Set handlers for IPI PAUSE and RESUME\n");
 #endif
 
-#ifdef MEMORY_REQUEST_WAIT
     // Get system freq
     sysfreq = generic_timer_get_freq();
-#endif
 }

@@ -14,13 +14,14 @@
 #include <periodic_task.h>
 #include <prem_task.h>
 #include <data.h>
+#include <generic_timer.h>
 
 // Request the default IPI and memory request wait
 #ifndef DEFAULT_IPI_HANDLERS
-        #error DEFAULT_IPI_HANDLERS must be defined with value y for this test (make all ... DEFAULT_IPI_HANDLERS=y)
+#error DEFAULT_IPI_HANDLERS must be defined with value y for this test (make all ... DEFAULT_IPI_HANDLERS=y)
 #endif
 #ifndef MEMORY_REQUEST_WAIT
-        #error MEMORY_REQUEST_WAIT must be defined with value y for this test (make all ... MEMORY_REQUEST_WAIT=y)
+#error MEMORY_REQUEST_WAIT must be defined with value y for this test (make all ... MEMORY_REQUEST_WAIT=y)
 #endif
 
 // Task handler, change to array for multiple tasks in the future
@@ -35,8 +36,15 @@ struct task_data
     uint32_t task_id;
 };
 
+volatile int wow = 0;
 void vTaskHypercall(void *pvParameters)
 {
+    irq_send_ipi(0b10);
+    while (wow == 0)
+        ;
+    
+    wow = 0;
+    printf("IPI called!\n");
     struct task_data *task_data = (struct task_data *)pvParameters;
 
     // Just computes the sum and prints the result
@@ -47,18 +55,65 @@ void vTaskHypercall(void *pvParameters)
     }
 
     printf("Sum of appdata for task %d on CPU %d: %ld\n", task_data->task_id, task_data->cpu_id, sum);
-    vTaskDelay(pdMS_TO_TICKS(300));
+    vTaskPREMDelay(pdMS_TO_TICKS(300));
 }
 
 void vTaskInterference()
 {
-    // Here nothing, just interferences, just prefetch 512kB and return
+    uint64_t sysfreq = generic_timer_get_freq();
+
+    // Interfere a lot, do not let them breathe
+    while (1)
+    {
+        // Memory phase (on highest priority CPU, so ack will always be 1 or 0 with time to wait)
+        union memory_request_answer answer = {.raw = request_memory_access(0)};
+
+        // This task is OP, please nerf
+        while (answer.ack == 0 && answer.ttw != 0)
+        {
+            // Wait for this amount of ticks
+            vTaskDelay(pdSYSTICK_TO_TICKS(sysfreq, answer.ttw));
+
+            // Re-ask for access (but this time you are sure to be accepted right? Not sure thus while)
+            answer.raw = request_memory_access(0);
+        }
+
+        // From here we are sure that we have memory access
+        // We just wait for 500ms (Mi = 500ms, Ci = 3*Mi = 1.5s)
+        vTaskPREMDelay(pdMS_TO_TICKS(500));
+
+        // Release memory
+        revoke_memory_access();
+
+        // Computation phase (nothing :D)
+        // Back to memory phase then
+    }
+}
+
+void test(void)
+{
+    printf("Hello hihi\n");
+    wow = 1;
 }
 
 struct task_data task1_data, task2_data;
 void main_app(void)
 {
     uint64_t cpu_id = hypercall(HC_GET_CPU_ID, 0, 0, 0);
+
+    // // Enable IPI pause
+    // irq_set_handler(IPI_IRQ_PAUSE, test);
+    // irq_enable(IPI_IRQ_PAUSE);
+    // irq_set_prio(IPI_IRQ_PAUSE, IRQ_MAX_PRIO);
+
+    // // Enable IPI resume
+    // irq_set_handler(IPI_IRQ_RESUME, test);
+    // irq_enable(IPI_IRQ_RESUME);
+    // irq_set_prio(IPI_IRQ_RESUME, IRQ_MAX_PRIO);
+
+    irq_set_handler(IPI_IRQ_ID, test);
+    irq_enable(IPI_IRQ_ID);
+    irq_set_prio(IPI_IRQ_ID, IRQ_MAX_PRIO);
 
     // Init and create PREM task
     vInitPREM();
@@ -78,7 +133,7 @@ void main_app(void)
             "TestPREMTask1",
             configMINIMAL_STACK_SIZE,
             premtask1_parameters,
-            tskIDLE_PRIORITY + 2,
+            tskIDLE_PRIORITY + 3,
             &(xTaskHandler));
 
         xTaskPREMCreate(
@@ -86,20 +141,20 @@ void main_app(void)
             "TestPREMTask2",
             configMINIMAL_STACK_SIZE,
             premtask2_parameters,
-            tskIDLE_PRIORITY + 1,
+            tskIDLE_PRIORITY + 2,
             &(xTaskHandler));
     }
     else
     {
         // Just interferences, the goal is to provoke destiny and try to show the bonus message (only during debug) that we ask too frequently
-        TickType_t waiting_ticks = pdMS_TO_TICKS(5);
-        struct premtask_parameters premtask1_parameters = {.tickPeriod = waiting_ticks, .data = appdata, .data_size = MAX_DATA_SIZE, .pvParameters = NULL};
-        xTaskPREMCreate(vTaskInterference,
-                        "Blocked",
-                        configMINIMAL_STACK_SIZE,
-                        premtask1_parameters,
-                        tskIDLE_PRIORITY + 4,
-                        NULL);
+        // TickType_t waiting_ticks = pdMS_TO_TICKS(1);
+        // struct premtask_parameters premtask1_parameters = {.tickPeriod = waiting_ticks, .data = appdata, .data_size = MAX_DATA_SIZE, .pvParameters = NULL};
+        xTaskCreate(vTaskInterference,
+                    "Blocked",
+                    configMINIMAL_STACK_SIZE,
+                    NULL,
+                    tskIDLE_PRIORITY + 4,
+                    NULL);
     }
     vTaskStartScheduler();
 }
