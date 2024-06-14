@@ -36,15 +36,13 @@ struct task_data
     uint32_t task_id;
 };
 
-volatile int wow = 0;
+void test(unsigned int id)
+{
+    printf("Hello hihi (int %d) (CPU %d)\n", id, hypercall(HC_GET_CPU_ID, 0, 0, 0));
+}
+
 void vTaskHypercall(void *pvParameters)
 {
-    irq_send_ipi(0b10);
-    while (wow == 0)
-        ;
-    
-    wow = 0;
-    printf("IPI called!\n");
     struct task_data *task_data = (struct task_data *)pvParameters;
 
     // Just computes the sum and prints the result
@@ -54,7 +52,7 @@ void vTaskHypercall(void *pvParameters)
         sum += appdata[i];
     }
 
-    printf("Sum of appdata for task %d on CPU %d: %ld\n", task_data->task_id, task_data->cpu_id, sum);
+    // printf("Sum of appdata for task %d on CPU %d: %ld\n", task_data->task_id, task_data->cpu_id, sum);
     vTaskPREMDelay(pdMS_TO_TICKS(300));
 }
 
@@ -79,8 +77,8 @@ void vTaskInterference()
         }
 
         // From here we are sure that we have memory access
-        // We just wait for 500ms (Mi = 500ms, Ci = 3*Mi = 1.5s)
-        vTaskPREMDelay(pdMS_TO_TICKS(500));
+        // We just wait for 500ms (Mi = 200ms, Ci = 3*Mi = 600ms)
+        vTaskPREMDelay(pdMS_TO_TICKS(50));
 
         // Release memory
         revoke_memory_access();
@@ -90,18 +88,15 @@ void vTaskInterference()
     }
 }
 
-void test(void)
-{
-    printf("Hello hihi\n");
-    wow = 1;
-}
-
 struct task_data task1_data, task2_data;
 void main_app(void)
 {
     uint64_t cpu_id = hypercall(HC_GET_CPU_ID, 0, 0, 0);
 
-    // // Enable IPI pause
+    // irq_set_handler(IPI_IRQ_ID, test);
+    // irq_enable(IPI_IRQ_ID);
+    // irq_set_prio(IPI_IRQ_ID, IRQ_MAX_PRIO);
+
     // irq_set_handler(IPI_IRQ_PAUSE, test);
     // irq_enable(IPI_IRQ_PAUSE);
     // irq_set_prio(IPI_IRQ_PAUSE, IRQ_MAX_PRIO);
@@ -110,10 +105,6 @@ void main_app(void)
     // irq_set_handler(IPI_IRQ_RESUME, test);
     // irq_enable(IPI_IRQ_RESUME);
     // irq_set_prio(IPI_IRQ_RESUME, IRQ_MAX_PRIO);
-
-    irq_set_handler(IPI_IRQ_ID, test);
-    irq_enable(IPI_IRQ_ID);
-    irq_set_prio(IPI_IRQ_ID, IRQ_MAX_PRIO);
 
     // Init and create PREM task
     vInitPREM();
@@ -156,5 +147,6 @@ void main_app(void)
                     tskIDLE_PRIORITY + 4,
                     NULL);
     }
+
     vTaskStartScheduler();
 }

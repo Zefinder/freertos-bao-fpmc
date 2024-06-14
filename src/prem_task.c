@@ -47,9 +47,11 @@ void wait_for(uint64_t ttw)
 #endif
 
 #ifdef DEFAULT_IPI_HANDLERS
-void ipi_pause_handler()
+void ipi_pause_handler(unsigned int id)
 {
-    printf("Please register the IPI PAUSE interrupt ;(\n");
+    // printf("BBBBBBBBBBBBBBBBBBBBBBBBBBBB\n");
+    // printf("Please register the IPI PAUSE interrupt ;(\n");
+    hypercall(HC_DISPLAY_STRING, 6, 0, 0);
     enum states current_state = get_current_state();
     if (current_state == MEMORY_PHASE)
     {
@@ -62,12 +64,14 @@ void ipi_pause_handler()
     {
         printf("CPU 1 is not in MEMORY_PHASE...\n");
     }
+    hypercall(HC_DISPLAY_STRING, 6, 0, 0);
 }
 
-void ipi_resume_handler()
+void ipi_resume_handler(unsigned int id)
 {
-    printf("Please register the IPI RESUME interrupt ;(\n");
     enum states current_state = get_current_state();
+    // printf("AAAAAAAAAAAAAAAAAAAAAAAAAAA\n");
+    hypercall(HC_DISPLAY_STRING, 7, 0, 0);
     if (current_state == SUSPENDED)
     {
         // Resume task
@@ -78,7 +82,7 @@ void ipi_resume_handler()
     {
         printf("CPU 1 is not in SUSPENDED state...\n");
     }
-
+    hypercall(HC_DISPLAY_STRING, 7, 0, 0);
 }
 #endif
 
@@ -137,6 +141,7 @@ void vPREMTask(void *pvParameters)
     // Fetch
     change_state(MEMORY_PHASE);
     prefetch_data((uint64_t)prv_premtask_parameters->data, prv_premtask_parameters->data_size);
+    vTaskPREMDelay(pdMS_TO_TICKS(100));
 
     // Revoke access and compute
     change_state(COMPUTATION_PHASE);
@@ -202,17 +207,15 @@ void vInitPREM()
 {
 // Only set handlers iff they are defined before
 #ifdef DEFAULT_IPI_HANDLERS
-    // // Enable IPI pause
-    // irq_set_handler(IPI_IRQ_PAUSE, ipi_pause_handler);
-    // irq_enable(IPI_IRQ_PAUSE);
-    // irq_set_prio(IPI_IRQ_PAUSE, IRQ_MAX_PRIO);
+    // Enable IPI pause
+    irq_set_handler(IPI_IRQ_PAUSE, ipi_pause_handler);
+    irq_enable(IPI_IRQ_PAUSE);
+    irq_set_prio(IPI_IRQ_PAUSE, IRQ_MAX_PRIO);
 
-    // // Enable IPI resume
-    // irq_set_handler(IPI_IRQ_RESUME, ipi_resume_handler);
-    // irq_enable(IPI_IRQ_RESUME);
-    // irq_set_prio(IPI_IRQ_RESUME, IRQ_MAX_PRIO);
-
-    printf("Set handlers for IPI PAUSE and RESUME\n");
+    // Enable IPI resume
+    irq_set_handler(IPI_IRQ_RESUME, ipi_resume_handler);
+    irq_enable(IPI_IRQ_RESUME);
+    irq_set_prio(IPI_IRQ_RESUME, IRQ_MAX_PRIO);
 #endif
 
     // Get system freq
