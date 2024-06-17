@@ -22,7 +22,7 @@ struct prv_premtask_parameters
 
 volatile union memory_request_answer memory_access = {.raw = 0};
 volatile uint8_t hypercalled = 0;
-volatile uint8_t suspend_prefetch = 0;
+// volatile uint8_t suspend_prefetch = 0;
 
 uint64_t sysfreq = 0;
 
@@ -48,6 +48,11 @@ void wait_for(uint64_t ttw)
 #endif
 
 #ifdef DEFAULT_IPI_HANDLERS
+#include <suspend_task_irq.h>
+
+// Saved ELR_EL1 and SPSR_EL1
+struct saved_registers saved_registers;
+
 void ipi_pause_handler(unsigned int id)
 {
     // printf("BBBBBBBBBBBBBBBBBBBBBBBBBBBB\n");
@@ -59,10 +64,23 @@ void ipi_pause_handler(unsigned int id)
         // Pause task
         change_state(SUSPENDED);
         // memory_access.raw = 0;
-		suspend_prefetch = 1;
+		// suspend_prefetch = 1;
 		
-		// TODO Set end of interrupt for IPI pause instead of checking in prefetch 
-        // suspend_task();
+		// Save ELR_EL1 and SPSR_EL1
+		uint64_t elr_el1, spsr_el1;
+		__asm__ volatile (
+			"mrs %0, ELR_EL1\n\t"
+			"mrs %1, SPSR_EL1\n\t"
+			: "=r" (elr_el1), "=r" (spsr_el1)
+		);
+		
+		// Change ELR_EL1 to the address of suspend_task_irq
+		uint64_t suspend_task_irq_address = (uint64_t)suspend_task_irq;
+		__asm__ volatile (
+			"msr ELR_EL1, %0\n\t"
+			: // No input
+			: "r" (suspend_task_irq_address)
+		);
     }
     else
     {
@@ -78,9 +96,21 @@ void ipi_resume_handler(unsigned int id)
     hypercall(HC_DISPLAY_STRING, 7, 0, 0);
     if (current_state == SUSPENDED)
     {
+		uint64_t elr_el1;
+		__asm__ volatile (
+			"mrs %0, ELR_EL1\n\t"
+			: "=r" (elr_el1)
+		);
+		
+		uint64_t suspend_task_irq_address = (uint64_t)suspend_task_irq;
+		printf("Last PC: %ld\n", elr_el1);
+		printf("suspend_task_irq_address: %ld\n", suspend_task_irq_address);
+		printf("prefetch address: %ld\n", (uint64_t)prefetch_data);
+		printf("GUEST=%d\n", GUEST);
+		
         // Resume task
         memory_access.raw = 1;
-		suspend_prefetch = 0;
+		// suspend_prefetch = 0;
         change_state(MEMORY_PHASE);
     }
     else
@@ -145,7 +175,7 @@ void vPREMTask(void *pvParameters)
 
     // Fetch
     change_state(MEMORY_PHASE);
-    prefetch_data((uint64_t)prv_premtask_parameters->data, prv_premtask_parameters->data_size, &suspend_prefetch);
+    prefetch_data((uint64_t)prv_premtask_parameters->data, prv_premtask_parameters->data_size);
     vTaskPREMDelay(pdMS_TO_TICKS(100));
 
     // Revoke access and compute

@@ -35,10 +35,6 @@ union memory_request_answer
  */
 struct saved_registers
 {
-    uint64_t x0;
-    uint64_t x1;
-    uint64_t x2;
-    uint64_t x3;
     uint64_t spsr_el1;
     uint64_t elr_el1;
 };
