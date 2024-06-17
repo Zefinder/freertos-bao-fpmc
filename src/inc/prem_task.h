@@ -30,17 +30,31 @@ union memory_request_answer
 };
 
 /*
+ * Save important registers after an IPI_PAUSE to be able to restore context after task
+ * suspension
+ */
+struct saved_registers
+{
+    uint64_t x0;
+    uint64_t x1;
+    uint64_t x2;
+    uint64_t x3;
+    uint64_t spsr_el1;
+    uint64_t elr_el1;
+};
+
+/*
  * Delays the PREM task of [waitingTicks] ticks. (FreeRTOS ticks)
  *
- * This implementation of vTaskDelay is here for a reason. As specified in the 
- * documentation of xTaskPREMCreate, the scheduler is off when running the 
- * calculation phase thus using vTaskDelay will do nothing. Preemption is 
- * enabled to allow switching when a lower priority task is waiting for a 
- * memory access and a higher priority task is ready. If the scheduler was 
+ * This implementation of vTaskDelay is here for a reason. As specified in the
+ * documentation of xTaskPREMCreate, the scheduler is off when running the
+ * calculation phase thus using vTaskDelay will do nothing. Preemption is
+ * enabled to allow switching when a lower priority task is waiting for a
+ * memory access and a higher priority task is ready. If the scheduler was
  * still up when using vTaskDelay, even if the priority of the task was change
  * to the max during its execution, there would be a context switch... This is
  * not what we want!
- * 
+ *
  * This uses the generic timer to block the task and not provoke a context switch.
  */
 void vTaskPREMDelay(TickType_t waitingTicks);
@@ -61,18 +75,18 @@ void vTaskPREMDelay(TickType_t waitingTicks);
  * while fetching memory or computing. However, if a task of lower priority is
  * suspended and didn't begin its memory phase, then a task of higher priority can
  * take its place.
- * 
+ *
  * Unless you want to break a lot of things, avoid using the vTaskSuspendAll and
- * xTaskResumeAll functions. If you really want to use them, please use vTaskSuspendAll 
+ * xTaskResumeAll functions. If you really want to use them, please use vTaskSuspendAll
  * first since during computation phase (the user task) the scheduler is suspended
  * and resuming it will probably prempt the task and won't do what you wanted to do...
- * 
+ *
  * As the scheduler is suspended, using vTaskDelay will do... nothing! Because preemption
  * is enabled, vTaskDelay would cause a reschedule if the scheduler was enabled, even
- * if the task had the highest priority. One idea was to set the running task to the 
- * highest priority when running so you never get preempted, but if delaying causes 
+ * if the task had the highest priority. One idea was to set the running task to the
+ * highest priority when running so you never get preempted, but if delaying causes
  * preemption then this is useless. If you want to put delay in PREM tasks, there is
- * a vTaskPREMDelay that uses the generic timer. 
+ * a vTaskPREMDelay that uses the generic timer.
  *
  * There must be no while(1) or for(;;) inside the task to repeat. Since it is an
  * already periodic task, it will repeat until deletion.

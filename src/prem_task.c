@@ -21,7 +21,8 @@ struct prv_premtask_parameters
 };
 
 volatile union memory_request_answer memory_access = {.raw = 0};
-volatile int hypercalled = 0;
+volatile uint8_t hypercalled = 0;
+volatile uint8_t suspend_prefetch = 0;
 
 uint64_t sysfreq = 0;
 
@@ -57,8 +58,11 @@ void ipi_pause_handler(unsigned int id)
     {
         // Pause task
         change_state(SUSPENDED);
-        memory_access.raw = 0;
-        suspend_task();
+        // memory_access.raw = 0;
+		suspend_prefetch = 1;
+		
+		// TODO Set end of interrupt for IPI pause instead of checking in prefetch 
+        // suspend_task();
     }
     else
     {
@@ -76,6 +80,7 @@ void ipi_resume_handler(unsigned int id)
     {
         // Resume task
         memory_access.raw = 1;
+		suspend_prefetch = 0;
         change_state(MEMORY_PHASE);
     }
     else
@@ -140,13 +145,16 @@ void vPREMTask(void *pvParameters)
 
     // Fetch
     change_state(MEMORY_PHASE);
-    prefetch_data((uint64_t)prv_premtask_parameters->data, prv_premtask_parameters->data_size);
+    prefetch_data((uint64_t)prv_premtask_parameters->data, prv_premtask_parameters->data_size, &suspend_prefetch);
     vTaskPREMDelay(pdMS_TO_TICKS(100));
 
     // Revoke access and compute
     change_state(COMPUTATION_PHASE);
     revoke_memory_access();
     prv_premtask_parameters->pxTaskCode(prv_premtask_parameters->pvParameters);
+	
+	// Clear cache (TODO Verify that it doesn't cause interferences)
+	clear_L2_cache((uint64_t)prv_premtask_parameters->data, prv_premtask_parameters->data_size);
 
     // Decrease hypercall counter and if it is more than 1, we request again (for preempted task)
     if (--hypercalled)
