@@ -41,29 +41,61 @@ end_flush:
 .section .text
 
 /*
- * void prefetch_data(address, size, suspend_prefetch)
+ * void prefetch_data(address, size)
  * 
  * Prefetches [size] bytes from address [address]
- * TODO for now uses a pointer to a suspend prefetch value. To change!
  * 
  * x0: uint64_t address
  * x1: uint64_t size 
- * x2: uint8_t* suspend_prefetch
  */
 .func 
 prefetch_data:
     lsr x1, x1, #LOG2_L2_CACHE_LINE_SIZE    // x1 is now the remaining number of lines to prefetch
 
 prefetch_loop:
-	// ldr x3, [x2]					// Load suspend prefetch
-	// cmp x3, #0						// Compare if paused
-	// bne prefetch_loop				// If pause == 1 then loop TODO THIS IS BAD, THIS WILL CREATE INTERFERENCES
-	
     prfm PLDL2KEEP, [x0]            // Prefetch L2 cache from address [x0 & ~(L2_CACHE_LINE_SIZE - 1) ; x0 | (L2_CACHE_LINE_SIZE - 1)]
     add x0, x0, #L2_CACHE_LINE_SIZE // x0 += L2_CACHE_LINE_SIZE
     subs x1, x1, #1                 // Decrease remaining lines
-    bne prefetch_loop               // If x1 > 0 continue
+    bne prefetch_loop               // If x1 > 0 loop
 
 end_prefetch:
+    ret
+.endfunc
+
+.global prefetch_data_prem
+.type prefetch_data_prem, %function
+.section .text
+
+/*
+ * void prefetch_data_prem(address, size, suspend_prefetch)
+ * 
+ * Prefetches [size] bytes from address [address]
+ * Uses [suspend_prefetch] to know if it is possible to
+ * continue the prefetch. If not, then waits for an int
+ * (since IPI_RESUME will be the one that will give access
+ * to memory) and rechecks. 
+ * 
+ * x0: uint64_t address
+ * x1: uint64_t size 
+ * x2: uint8_t* suspend_prefetch
+ */
+.func 
+prefetch_data_prem:
+    lsr x1, x1, #LOG2_L2_CACHE_LINE_SIZE    // x1 is now the remaining number of lines to prefetch
+
+prefetch_loop_prem:
+    prfm PLDL2KEEP, [x0]            // Prefetch L2 cache from address [x0 & ~(L2_CACHE_LINE_SIZE - 1) ; x0 | (L2_CACHE_LINE_SIZE - 1)]
+    add x0, x0, #L2_CACHE_LINE_SIZE // x0 += L2_CACHE_LINE_SIZE
+    subs x1, x1, #1                 // Decrease remaining lines
+    beq end_prefetch_prem           // If x1 == 0 end
+
+wait_for_int: 
+	ldr x3, [x2]			// Load suspend prefetch
+	cmp x3, #0				// Compare if paused
+	bne prefetch_loop_prem	// If pause == 1 then loop
+    wfi                     // Else wait for next interrupt
+    b wait_for_int          // And recheck (maybe it was IPI_RESUME)
+
+end_prefetch_prem:
     ret
 .endfunc

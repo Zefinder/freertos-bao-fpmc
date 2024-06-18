@@ -48,7 +48,7 @@ void wait_for(uint64_t ttw)
 #endif
 
 #ifdef DEFAULT_IPI_HANDLERS
-#include <suspend_task_irq.h>
+volatile uint8_t suspend_prefetch = 0;
 
 // Saved ELR_EL1 and SPSR_EL1
 struct saved_registers saved_registers;
@@ -57,81 +57,78 @@ void ipi_pause_handler(unsigned int id)
 {
     // printf("BBBBBBBBBBBBBBBBBBBBBBBBBBBB\n");
     // printf("Please register the IPI PAUSE interrupt ;(\n");
-    hypercall(HC_DISPLAY_STRING, 6, 0, 0);
+    // hypercall(HC_DISPLAY_STRING, 6, 0, 0);
     enum states current_state = get_current_state();
     if (current_state == MEMORY_PHASE)
     {
-        // Pause task
+        // Pause task (we already are in prefetch)
         change_state(SUSPENDED);
-        // memory_access.raw = 0;
-		// suspend_prefetch = 1;
+		suspend_prefetch = 1;
 		
-		// Save ELR_EL1 and SPSR_EL1
-		uint64_t elr_el1, spsr_el1;
-		__asm__ volatile (
-			"mrs %0, ELR_EL1\n\t"
-			"mrs %1, SPSR_EL1\n\t"
-			: "=r" (elr_el1), "=r" (spsr_el1)
-		);
+		// // Save ELR_EL1 and SPSR_EL1
+		// uint64_t elr_el1, spsr_el1;
+		// __asm__ volatile (
+		// 	"mrs %0, ELR_EL1\n\t"
+		// 	"mrs %1, SPSR_EL1\n\t"
+		// 	: "=r" (elr_el1), "=r" (spsr_el1)
+		// );
 		
-		// Change ELR_EL1 to the address of suspend_task_irq
-		uint64_t suspend_task_irq_address = (uint64_t)suspend_task_irq;
-		__asm__ volatile (
-			"msr ELR_EL1, %0\n\t"
-			: // No input
-			: "r" (suspend_task_irq_address)
-		);
+		// // Change ELR_EL1 to the address of suspend_task_irq
+		// uint64_t suspend_task_irq_address = (uint64_t)suspend_task_irq;
+		// __asm__ volatile (
+		// 	"msr ELR_EL1, %0\n\t"
+		// 	: // No input
+		// 	: "r" (suspend_task_irq_address)
+		// );
     }
     else
     {
-        printf("CPU 1 is not in MEMORY_PHASE...\n");
+        // printf("CPU 1 is not in MEMORY_PHASE...\n");
     }
-    hypercall(HC_DISPLAY_STRING, 6, 0, 0);
-
-    printf("Bloking!\n");
-    suspend_task_irq();
-    printf("Unblocked!\n");
+    // hypercall(HC_DISPLAY_STRING, 6, 0, 0);
 }
 
 void ipi_resume_handler(unsigned int id)
 {
     enum states current_state = get_current_state();
     // printf("AAAAAAAAAAAAAAAAAAAAAAAAAAA\n");
-    hypercall(HC_DISPLAY_STRING, 7, 0, 0);
+    // hypercall(HC_DISPLAY_STRING, 7, 0, 0);
     if (current_state == SUSPENDED)
     {
-		uint64_t elr_el1;
-		__asm__ volatile (
-			"mrs %0, ELR_EL1\n\t"
-			: "=r" (elr_el1)
-		);
+		// uint64_t elr_el1;
+		// __asm__ volatile (
+		// 	"mrs %0, ELR_EL1\n\t"
+		// 	: "=r" (elr_el1)
+		// );
 		
 		// uint64_t suspend_task_irq_address = (uint64_t)suspend_task_irq;
-		printf("Last PC: %ld\n", elr_el1);
-		printf("suspended_address: %ld\n", (uint64_t)suspend_task);
-		printf("wait_for_address: %ld\n", (uint64_t)wait_for);
-		printf("ipi_pause_handler_address: %ld\n", (uint64_t)ipi_pause_handler);
-		printf("ipi_resume_handler_address: %ld\n", (uint64_t)ipi_resume_handler);
-		printf("vTaskPREMDelay_address: %ld\n", (uint64_t)vTaskPREMDelay);
-		printf("vPREMTask_address: %ld\n", (uint64_t)vPREMTask);
-		printf("vInitPREM_address: %ld\n", (uint64_t)vInitPREM);
-		printf("xTaskPREMCreate_address: %ld\n", (uint64_t)xTaskPREMCreate);
-		printf("clear_L2_cache_address: %ld\n", (uint64_t)clear_L2_cache);
-		printf("hypercall_address: %ld\n", (uint64_t)hypercall);
-		printf("prefetch address: %ld\n", (uint64_t)prefetch_data);
-		printf("suspend_task_irq_address: %ld\n", (uint64_t)suspend_task_irq);
+		// printf("ELR_EL1: %lx\n", elr_el1);
+		// printf("suspended_address: %lx\n", (uint64_t)suspend_task);
+		// printf("wait_for_address: %lx\n", (uint64_t)wait_for);
+		// printf("ipi_pause_handler_address: %lx\n", (uint64_t)ipi_pause_handler);
+		// printf("ipi_resume_handler_address: %lx\n", (uint64_t)ipi_resume_handler);
+		// printf("vTaskPREMDelay_address: %lx\n", (uint64_t)vTaskPREMDelay);
+		// printf("vPREMTask_address: %lx\n", (uint64_t)vPREMTask);
+		// printf("vInitPREM_address: %lx\n", (uint64_t)vInitPREM);
+		// printf("xTaskPREMCreate_address: %lx\n", (uint64_t)xTaskPREMCreate);
+		// printf("clear_L2_cache_address: %lx\n", (uint64_t)clear_L2_cache);
+		// printf("hypercall_address: %lx\n", (uint64_t)hypercall);
+		// printf("prefetch address: %lx\n", (uint64_t)prefetch_data);
+		// printf("generic_timer_read_counter address: %lx\n", (uint64_t)generic_timer_read_counter);
+		// printf("suspend_task_irq_address: %lx\n", (uint64_t)suspend_task_irq);
 		// printf("GUEST=%d\n", GUEST);
 		
-        // Resume task
+        // Resume task (we can either wait for first access being in prefetch)
         memory_access.raw = 1;
-		// suspend_prefetch = 0;
+		suspend_prefetch = 0;
+
         change_state(MEMORY_PHASE);
     }
     else
     {
-        printf("CPU 1 is not in SUSPENDED state...\n");
+        // printf("CPU 1 is not in SUSPENDED state...\n");
     }
-    hypercall(HC_DISPLAY_STRING, 7, 0, 0);
+    // hypercall(HC_DISPLAY_STRING, 7, 0, 0);
 }
 #endif
 
@@ -189,7 +186,11 @@ void vPREMTask(void *pvParameters)
 
     // Fetch
     change_state(MEMORY_PHASE);
-    prefetch_data((uint64_t)prv_premtask_parameters->data, prv_premtask_parameters->data_size);
+    #ifdef DEFAULT_IPI_HANDLERS
+        prefetch_data_prem((uint64_t)prv_premtask_parameters->data, prv_premtask_parameters->data_size, &suspend_prefetch);
+    #else
+        prefetch_data((uint64_t)prv_premtask_parameters->data, prv_premtask_parameters->data_size);
+    #endif
     vTaskPREMDelay(pdMS_TO_TICKS(100));
 
     // Revoke access and compute

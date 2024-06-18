@@ -43,7 +43,6 @@ void test(unsigned int id)
 
 void vTaskHypercall(void *pvParameters)
 {
-    printf("vTaskHypercall_address: %lx\n", (uint64_t)vTaskHypercall);
     struct task_data *task_data = (struct task_data *)pvParameters;
 
     // Just computes the sum and prints the result
@@ -55,13 +54,14 @@ void vTaskHypercall(void *pvParameters)
 
     // printf("Sum of appdata for task %d on CPU %d: %ld\n", task_data->task_id, task_data->cpu_id, sum);
     vTaskPREMDelay(pdMS_TO_TICKS(300));
-	
-	// irq_send_ipi(0b1);
+
+    // irq_send_ipi(0b1);
 }
 
 void vTaskInterference()
 {
     uint64_t sysfreq = generic_timer_get_freq();
+    // TODO Wait for interrupt instead of always
 
     // Interfere a lot, do not let them breathe
     while (1)
@@ -88,7 +88,7 @@ void vTaskInterference()
 
         // Computation phase (nothing :D)
         // Back to memory phase then
-        hypercall(HC_DISPLAY_STRING, 0, 0, 0);
+        // hypercall(HC_DISPLAY_STRING, 0, 0, 0);
     }
 }
 
@@ -114,11 +114,11 @@ void main_app(void)
     vInitPREM();
     if (cpu_id == 1)
     {
-		// uart_enable_rxirq();
-		// irq_set_handler(UART_IRQ_ID, test);
-		// irq_set_prio(UART_IRQ_ID, IRQ_MAX_PRIO);
-		// irq_enable(UART_IRQ_ID);
-		
+        // uart_enable_rxirq();
+        // irq_set_handler(UART_IRQ_ID, test);
+        // irq_set_prio(UART_IRQ_ID, IRQ_MAX_PRIO);
+        // irq_enable(UART_IRQ_ID);
+
         task1_data.cpu_id = cpu_id;
         task1_data.task_id = 1;
         task2_data.cpu_id = cpu_id;
