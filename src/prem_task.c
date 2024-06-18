@@ -87,6 +87,10 @@ void ipi_pause_handler(unsigned int id)
         printf("CPU 1 is not in MEMORY_PHASE...\n");
     }
     hypercall(HC_DISPLAY_STRING, 6, 0, 0);
+
+    printf("Bloking!\n");
+    suspend_task_irq();
+    printf("Unblocked!\n");
 }
 
 void ipi_resume_handler(unsigned int id)
@@ -102,11 +106,21 @@ void ipi_resume_handler(unsigned int id)
 			: "=r" (elr_el1)
 		);
 		
-		uint64_t suspend_task_irq_address = (uint64_t)suspend_task_irq;
+		// uint64_t suspend_task_irq_address = (uint64_t)suspend_task_irq;
 		printf("Last PC: %ld\n", elr_el1);
-		printf("suspend_task_irq_address: %ld\n", suspend_task_irq_address);
+		printf("suspended_address: %ld\n", (uint64_t)suspend_task);
+		printf("wait_for_address: %ld\n", (uint64_t)wait_for);
+		printf("ipi_pause_handler_address: %ld\n", (uint64_t)ipi_pause_handler);
+		printf("ipi_resume_handler_address: %ld\n", (uint64_t)ipi_resume_handler);
+		printf("vTaskPREMDelay_address: %ld\n", (uint64_t)vTaskPREMDelay);
+		printf("vPREMTask_address: %ld\n", (uint64_t)vPREMTask);
+		printf("vInitPREM_address: %ld\n", (uint64_t)vInitPREM);
+		printf("xTaskPREMCreate_address: %ld\n", (uint64_t)xTaskPREMCreate);
+		printf("clear_L2_cache_address: %ld\n", (uint64_t)clear_L2_cache);
+		printf("hypercall_address: %ld\n", (uint64_t)hypercall);
 		printf("prefetch address: %ld\n", (uint64_t)prefetch_data);
-		printf("GUEST=%d\n", GUEST);
+		printf("suspend_task_irq_address: %ld\n", (uint64_t)suspend_task_irq);
+		// printf("GUEST=%d\n", GUEST);
 		
         // Resume task
         memory_access.raw = 1;

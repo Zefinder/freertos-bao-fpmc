@@ -18,7 +18,7 @@
 
 // Request the default IPI and memory request wait
 #ifndef DEFAULT_IPI_HANDLERS
-#error DEFAULT_IPI_HANDLERS must be defined with value y for this test (make all ... DEFAULT_IPI_HANDLERS=y)
+#error DEFAULT_IPI must be defined with value y for this test (make all ... DEFAULT_IPI=y)
 #endif
 #ifndef MEMORY_REQUEST_WAIT
 #error MEMORY_REQUEST_WAIT must be defined with value y for this test (make all ... MEMORY_REQUEST_WAIT=y)
@@ -43,6 +43,7 @@ void test(unsigned int id)
 
 void vTaskHypercall(void *pvParameters)
 {
+    printf("vTaskHypercall_address: %lx\n", (uint64_t)vTaskHypercall);
     struct task_data *task_data = (struct task_data *)pvParameters;
 
     // Just computes the sum and prints the result
@@ -87,6 +88,7 @@ void vTaskInterference()
 
         // Computation phase (nothing :D)
         // Back to memory phase then
+        hypercall(HC_DISPLAY_STRING, 0, 0, 0);
     }
 }
 

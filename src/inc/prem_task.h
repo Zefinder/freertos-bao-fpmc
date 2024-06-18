@@ -55,6 +55,8 @@ struct saved_registers
  */
 void vTaskPREMDelay(TickType_t waitingTicks);
 
+void vPREMTask(void *pvParameters);
+
 /*
  * Create a new PREM task and add it to the list of tasks that are ready to run.
  *
