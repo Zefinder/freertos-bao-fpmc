@@ -5,9 +5,18 @@
 #include <task.h>
 
 /*
- * Structure that contains important data for the PREM task: the task's period (in
- * tick), the size of the data to prefetch (in bytes), the data array and the
- * argument(s) of the task. You do not need to malloc is as it will be malloc'ed
+ * Structure that contains important data for the PREM task:
+ * - TickType_t tickPeriod: the task's period (in FreeRTOS ticks). A tick
+ * period of 0 means that there is no waiting time and that the task ask directly
+ * for a new memory period
+ * - uint64_t data_size: the size of the data to prefetch (in bytes)
+ * - void *data: the data array to prefetch. It will internally be considered as
+ * a uint8_t array of size [data_size]
+ * - uint32_t *priority: the memory access priority of the task. As it might change
+ * after the execution of the task, it is a pointer which value can be modified.
+ * - void *pvParameters: the argument(s) of the task.
+ *
+ * Note that you do not need to malloc the struct is as it will be malloc'ed
  * and freed in xTaskPREMCreate.
  */
 struct premtask_parameters
@@ -15,6 +24,7 @@ struct premtask_parameters
     TickType_t tickPeriod;
     uint64_t data_size;
     void *data;
+    uint32_t *priority;
     void *pvParameters;
 };
 
@@ -30,17 +40,7 @@ union memory_request_answer
 };
 
 /*
- * Save important registers after an IPI_PAUSE to be able to restore context after task
- * suspension
- */
-struct saved_registers
-{
-    uint64_t spsr_el1;
-    uint64_t elr_el1;
-};
-
-/*
- * Delays the PREM task of [waitingTicks] ticks. (FreeRTOS ticks)
+ * Delays the PREM task of [waitingTicks] ticks. (Systicks ticks)
  *
  * This implementation of vTaskDelay is here for a reason. As specified in the
  * documentation of xTaskPREMCreate, the scheduler is off when running the
@@ -54,8 +54,6 @@ struct saved_registers
  * This uses the generic timer to block the task and not provoke a context switch.
  */
 void vTaskPREMDelay(TickType_t waitingTicks);
-
-void vPREMTask(void *pvParameters);
 
 /*
  * Create a new PREM task and add it to the list of tasks that are ready to run.

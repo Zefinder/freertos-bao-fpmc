@@ -16,7 +16,7 @@ struct prv_premtask_parameters
     TaskFunction_t pxTaskCode;
     uint64_t data_size;
     void *data;
-    uint32_t priority;
+    uint32_t* priority;
     void *pvParameters;
 };
 
@@ -28,114 +28,44 @@ uint64_t sysfreq = 0;
 
 void suspend_task()
 {
+    // Wait for interrupt so we don't look at the memory for nothing
     while (!memory_access.raw)
-        ;
+        __asm__ volatile ("wfi");
 }
-
-#ifdef MEMORY_REQUEST_WAIT
-/* Waits for ttw systick ticks */
-void wait_for(uint64_t ttw)
-{
-    // Because the scheduler is disabled, we can't use vTaskDelay
-    // TODO Look for setting a timer
-    uint64_t current_time = generic_timer_read_counter();
-    uint64_t end_time = current_time + ttw;
-    while (current_time < end_time)
-    {
-        current_time = generic_timer_read_counter();
-    }
-}
-#endif
 
 #ifdef DEFAULT_IPI_HANDLERS
+/* Value that indicates if need to suspend prefetch (0 is no) */
 volatile uint8_t suspend_prefetch = 0;
-
-// Saved ELR_EL1 and SPSR_EL1
-struct saved_registers saved_registers;
 
 void ipi_pause_handler(unsigned int id)
 {
-    // printf("BBBBBBBBBBBBBBBBBBBBBBBBBBBB\n");
-    // printf("Please register the IPI PAUSE interrupt ;(\n");
-    // hypercall(HC_DISPLAY_STRING, 6, 0, 0);
     enum states current_state = get_current_state();
     if (current_state == MEMORY_PHASE)
     {
         // Pause task (we already are in prefetch)
         change_state(SUSPENDED);
 		suspend_prefetch = 1;
-		
-		// // Save ELR_EL1 and SPSR_EL1
-		// uint64_t elr_el1, spsr_el1;
-		// __asm__ volatile (
-		// 	"mrs %0, ELR_EL1\n\t"
-		// 	"mrs %1, SPSR_EL1\n\t"
-		// 	: "=r" (elr_el1), "=r" (spsr_el1)
-		// );
-		
-		// // Change ELR_EL1 to the address of suspend_task_irq
-		// uint64_t suspend_task_irq_address = (uint64_t)suspend_task_irq;
-		// __asm__ volatile (
-		// 	"msr ELR_EL1, %0\n\t"
-		// 	: // No input
-		// 	: "r" (suspend_task_irq_address)
-		// );
     }
-    else
-    {
-        // printf("CPU 1 is not in MEMORY_PHASE...\n");
-    }
-    // hypercall(HC_DISPLAY_STRING, 6, 0, 0);
 }
 
 void ipi_resume_handler(unsigned int id)
 {
     enum states current_state = get_current_state();
-    // printf("AAAAAAAAAAAAAAAAAAAAAAAAAAA\n");
-    // hypercall(HC_DISPLAY_STRING, 7, 0, 0);
     if (current_state == SUSPENDED)
     {
-		// uint64_t elr_el1;
-		// __asm__ volatile (
-		// 	"mrs %0, ELR_EL1\n\t"
-		// 	: "=r" (elr_el1)
-		// );
-		
-		// uint64_t suspend_task_irq_address = (uint64_t)suspend_task_irq;
-		// printf("ELR_EL1: %lx\n", elr_el1);
-		// printf("suspended_address: %lx\n", (uint64_t)suspend_task);
-		// printf("wait_for_address: %lx\n", (uint64_t)wait_for);
-		// printf("ipi_pause_handler_address: %lx\n", (uint64_t)ipi_pause_handler);
-		// printf("ipi_resume_handler_address: %lx\n", (uint64_t)ipi_resume_handler);
-		// printf("vTaskPREMDelay_address: %lx\n", (uint64_t)vTaskPREMDelay);
-		// printf("vPREMTask_address: %lx\n", (uint64_t)vPREMTask);
-		// printf("vInitPREM_address: %lx\n", (uint64_t)vInitPREM);
-		// printf("xTaskPREMCreate_address: %lx\n", (uint64_t)xTaskPREMCreate);
-		// printf("clear_L2_cache_address: %lx\n", (uint64_t)clear_L2_cache);
-		// printf("hypercall_address: %lx\n", (uint64_t)hypercall);
-		// printf("prefetch address: %lx\n", (uint64_t)prefetch_data);
-		// printf("generic_timer_read_counter address: %lx\n", (uint64_t)generic_timer_read_counter);
-		// printf("suspend_task_irq_address: %lx\n", (uint64_t)suspend_task_irq);
-		// printf("GUEST=%d\n", GUEST);
-		
         // Resume task (we can either wait for first access being in prefetch)
         memory_access.raw = 1;
 		suspend_prefetch = 0;
 
         change_state(MEMORY_PHASE);
     }
-    else
-    {
-        // printf("CPU 1 is not in SUSPENDED state...\n");
-    }
-    // hypercall(HC_DISPLAY_STRING, 7, 0, 0);
 }
 #endif
 
 void vTaskPREMDelay(TickType_t waitingTicks)
 {
     uint64_t current_time = generic_timer_read_counter();
-    uint64_t end_time = current_time + pdTICKS_TO_SYSTICK(sysfreq, waitingTicks);
+    uint64_t end_time = current_time + waitingTicks;
     while (current_time < end_time)
     {
         current_time = generic_timer_read_counter();
@@ -153,7 +83,7 @@ void vPREMTask(void *pvParameters)
     // Increment hypercall counter and if it is 1, we request memory (else no)
     if (++hypercalled == 1)
     {
-        memory_access.raw = request_memory_access(prv_premtask_parameters->priority);
+        memory_access.raw = request_memory_access(*prv_premtask_parameters->priority);
     }
 
     // When memory access wait is defined, memory ack 1 is the only yes value
@@ -162,12 +92,12 @@ void vPREMTask(void *pvParameters)
 #ifdef MEMORY_REQUEST_WAIT
         // If time to wait > 0, then hypervisor wants us to wait for a bit...
         // Just wait, no need to enable the scheduler since all hypercall will result in wait
-        // If you waited to short, then rewait
+        // If you waited to short, then rewait (if preemption in the future?)
         while (memory_access.ttw != 0)
         {
             // Wait for this duration and then make an hypercall
-            wait_for(memory_access.ttw);
-            memory_access.raw = request_memory_access(prv_premtask_parameters->priority);
+            vTaskPREMDelay(memory_access.ttw);
+            memory_access.raw = request_memory_access(*prv_premtask_parameters->priority);
 
             // Even if the answer is 1, we re-enable the scheduler since the task was waiting!
             // Maybe a higher priority task is ready, we need to verify that!
@@ -191,7 +121,6 @@ void vPREMTask(void *pvParameters)
     #else
         prefetch_data((uint64_t)prv_premtask_parameters->data, prv_premtask_parameters->data_size);
     #endif
-    vTaskPREMDelay(pdMS_TO_TICKS(100));
 
     // Revoke access and compute
     change_state(COMPUTATION_PHASE);
@@ -204,7 +133,7 @@ void vPREMTask(void *pvParameters)
     // Decrease hypercall counter and if it is more than 1, we request again (for preempted task)
     if (--hypercalled)
     {
-        memory_access.raw = request_memory_access(prv_premtask_parameters->priority);
+        memory_access.raw = request_memory_access(*prv_premtask_parameters->priority);
 
 #ifdef MEMORY_REQUEST_WAIT
         // Same thing here, if the hypervisor wants to wait, then we wait... instead of giving the hand.
@@ -212,10 +141,10 @@ void vPREMTask(void *pvParameters)
         while (memory_access.ack == 0 && memory_access.ttw != 0)
         {
             // Wait for this duration and then make an hypercall
-            wait_for(memory_access.ttw);
-            memory_access.raw = request_memory_access(prv_premtask_parameters->priority);
+            vTaskPREMDelay(memory_access.ttw);
+            memory_access.raw = request_memory_access(*prv_premtask_parameters->priority);
 
-            // This task exits and made a memory request for the next one and is sure that it didn't ask too fast
+            // This task exits and made a memory request for the next one and is sure that it didn't ask too fast (so ready to rewait...)
         }
 #endif
     }
@@ -243,7 +172,7 @@ BaseType_t xTaskPREMCreate(TaskFunction_t pxTaskCode,
     premtask_parameters_ptr->pxTaskCode = pxTaskCode;
     premtask_parameters_ptr->data_size = premtask_parameters.data_size;
     premtask_parameters_ptr->data = premtask_parameters.data;
-    premtask_parameters_ptr->priority = hypercall(HC_GET_CPU_ID, 0, 0, 0);
+    premtask_parameters_ptr->priority = premtask_parameters.priority;
     premtask_parameters_ptr->pvParameters = premtask_parameters.pvParameters;
 
     // Create a periodic task with custom arguments
@@ -255,6 +184,8 @@ BaseType_t xTaskPREMCreate(TaskFunction_t pxTaskCode,
                         uxPriority,
                         pxCreatedTask);
 }
+
+// TODO vPREMTaskDelete
 
 void vInitPREM()
 {
