@@ -15,6 +15,7 @@
 #include <prem_task.h>
 #include <data.h>
 #include <generic_timer.h>
+#include <benchmark.h>
 
 // Request the default IPI and memory request wait
 #ifndef DEFAULT_IPI_HANDLERS
@@ -29,24 +30,19 @@ TaskHandle_t xTaskHandler;
 #define DATA_SIZE_INTERFERENCE 10 kB
 
 // Generic timer frequency
-uint64_t sysfreq;
+uint64_t timer_frequency;
 
-struct interference_task_data
-{
-    uint32_t cpu_id;
-    uint32_t offset;
-};
-
-struct premtask_parameters premtask_parameters;
 uint64_t end_time = 0;
 int counter = 0;
 int print_counter = 0;
 uint32_t prio = 0;
-uint64_t sum = 0;
+uint64_t fetch_sum = 0;
 uint64_t min_time = -1;
 uint64_t max_time = 0;
 void vMasterTask(void *pvParameters)
 {
+    printf("AAAAAAAAAAAAAAH\n");
+
     // Get time at start of computation phase
     uint64_t current_time = generic_timer_read_counter();
 
@@ -61,7 +57,7 @@ void vMasterTask(void *pvParameters)
     uint64_t fetch_time = current_time - end_time;
 
     // Increase sum
-    sum += fetch_time;
+    fetch_sum += fetch_time;
 
     // Test min and max
     if (fetch_time > max_time)
@@ -81,7 +77,7 @@ void vMasterTask(void *pvParameters)
     }
 
     // Show result and print add print counter
-    printf("%ld,", pdSYSTICK_TO_NS(sysfreq, fetch_time));
+    printf("%ld,", pdSYSTICK_TO_NS(timer_frequency, fetch_time));
     if (++print_counter == 1000)
     {
         printf("\t# Number of realised tests: %d\n", counter);
@@ -92,20 +88,20 @@ void vMasterTask(void *pvParameters)
     if (counter == NUMBER_OF_TESTS)
     {
         // Compute average
-        uint64_t average_time = sum / NUMBER_OF_TESTS;
+        uint64_t average_time = fetch_sum / NUMBER_OF_TESTS;
 
         // Print results
         printf("]\n"); // End of array
-        printf("min_%dkB_prio%d_ns = %ld # ns\n", DATA_SIZE_0, prio, pdSYSTICK_TO_NS(sysfreq, min_time));
-        printf("max_%dkB_prio%d_ns = %ld # ns\n", DATA_SIZE_0, prio, pdSYSTICK_TO_NS(sysfreq, max_time));
-        printf("int_average_%dkB_prio%d_ns = %ld # ns\n", DATA_SIZE_0, prio, pdSYSTICK_TO_NS(sysfreq, average_time));
+        printf("min_%dkB_prio%d_ns = %ld # ns\n", DATA_SIZE_0, prio, pdSYSTICK_TO_NS(timer_frequency, min_time));
+        printf("max_%dkB_prio%d_ns = %ld # ns\n", DATA_SIZE_0, prio, pdSYSTICK_TO_NS(timer_frequency, max_time));
+        printf("int_average_%dkB_prio%d_ns = %ld # ns\n", DATA_SIZE_0, prio, pdSYSTICK_TO_NS(timer_frequency, average_time));
         printf("\n");
-        
+
         // Reset everything
         end_time = 0;
         counter = 0;
         print_counter = 0;
-        sum = 0;
+        fetch_sum = 0;
         min_time = -1;
         max_time = 0;
 
@@ -113,7 +109,7 @@ void vMasterTask(void *pvParameters)
         prio++;
     }
 
-    // If prio > 3 then tests finished. 
+    // If prio > 3 then tests finished.
     if (prio > 3)
     {
         end_benchmark();
@@ -128,29 +124,30 @@ void vMasterTask(void *pvParameters)
 void vTaskInterference(void *pvParameters)
 {
     // Computation phase will be the sum of all elements in the array
-    uint32_t offet = *(int *)pvParameters;
+    uint64_t offset = (uint64_t)pvParameters;
     uint64_t sum = 0;
-    for (int i = 0; i < DATA_SIZE_0; i++)
+    for (int i = offset; i < offset + DATA_SIZE_INTERFERENCE; i++)
     {
         sum += appdata[i];
     }
 }
 
-struct interference_task_data task_data;
+struct premtask_parameters premtask_parameters;
 void main_app(void)
 {
-    sysfreq = generic_timer_get_freq();
+    timer_frequency = generic_timer_get_freq();
     uint64_t cpu_id = hypercall(HC_GET_CPU_ID, 0, 0, 0);
 
     // Init and create PREM task
     vInitPREM();
 
-    // Init benchmark
-    printf("Begin PREM tests...\n");
-    start_benchmark();
-
     if (cpu_id == 0)
     {
+        // Init benchmark
+        printf("Begin PREM tests...\n");
+        start_benchmark();
+
+        // Fill in the struct all "interesting"
         premtask_parameters.tickPeriod = 0;
         premtask_parameters.data_size = DATA_SIZE_0;
         premtask_parameters.data = appdata;
@@ -175,7 +172,7 @@ void main_app(void)
         premtask_parameters.data_size = DATA_SIZE_INTERFERENCE;
         premtask_parameters.data = appdata + DATA_SIZE_0 + 2 * cpu_id * DATA_SIZE_INTERFERENCE;
         premtask_parameters.priority = &prio;
-        premtask_parameters.pvParameters = NULL;
+        premtask_parameters.pvParameters = (int *)(DATA_SIZE_0 + 2 * cpu_id * DATA_SIZE_INTERFERENCE);
         xTaskPREMCreate(
             vTaskInterference,
             "Interference",

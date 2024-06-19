@@ -121,12 +121,12 @@ void vPREMTask(void *pvParameters)
     #else
         prefetch_data((uint64_t)prv_premtask_parameters->data, prv_premtask_parameters->data_size);
     #endif
-
     // Revoke access and compute
     change_state(COMPUTATION_PHASE);
     revoke_memory_access();
     prv_premtask_parameters->pxTaskCode(prv_premtask_parameters->pvParameters);
 	
+    printf("AAAAAAAAAAAAAAH %d\n", *prv_premtask_parameters->priority);
 	// Clear cache (TODO Verify that it doesn't cause interferences)
 	clear_L2_cache((uint64_t)prv_premtask_parameters->data, prv_premtask_parameters->data_size);
 
