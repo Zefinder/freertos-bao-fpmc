@@ -30,6 +30,9 @@ TaskHandle_t xTaskHandler;
 // Change location for appdata
 #define DATA_SIZE 448 kB
 
+// Generic timer frequency 
+uint64_t sysfreq;
+
 struct task_data
 {
     uint32_t cpu_id;
@@ -53,7 +56,7 @@ void vTaskHypercall(void *pvParameters)
     }
 
     // printf("Sum of appdata for task %d on CPU %d: %ld\n", task_data->task_id, task_data->cpu_id, sum);
-    vTaskPREMDelay(pdMS_TO_TICKS(300));
+    vTaskPREMDelay(pdMS_TO_SYSTICK(sysfreq, 300));
 
     // irq_send_ipi(0b1);
 }
@@ -61,7 +64,6 @@ void vTaskHypercall(void *pvParameters)
 void vTaskInterference()
 {
     uint64_t sysfreq = generic_timer_get_freq();
-    // TODO Wait for interrupt instead of always
 
     // Interfere a lot, do not let them breathe
     while (1)
@@ -95,6 +97,7 @@ void vTaskInterference()
 struct task_data task1_data, task2_data;
 void main_app(void)
 {
+    sysfreq = generic_timer_get_freq();
     uint64_t cpu_id = hypercall(HC_GET_CPU_ID, 0, 0, 0);
 
     irq_set_handler(IPI_IRQ_ID, test);
@@ -126,8 +129,8 @@ void main_app(void)
 
         TickType_t waiting_ticks = pdMS_TO_TICKS(1000);
 
-        struct premtask_parameters premtask1_parameters = {.tickPeriod = waiting_ticks, .data = appdata, .data_size = DATA_SIZE, .pvParameters = (void *)&task1_data};
-        struct premtask_parameters premtask2_parameters = {.tickPeriod = 3 * waiting_ticks, .data = appdata, .data_size = DATA_SIZE, .pvParameters = (void *)&task2_data};
+        struct premtask_parameters premtask1_parameters = {.tickPeriod = waiting_ticks, .data = appdata, .data_size = DATA_SIZE, .priority = &cpu_id, .pvParameters = (void *)&task1_data};
+        struct premtask_parameters premtask2_parameters = {.tickPeriod = 3 * waiting_ticks, .data = appdata, .data_size = DATA_SIZE, .priority = &cpu_id, .pvParameters = (void *)&task2_data};
         xTaskPREMCreate(
             vTaskHypercall,
             "TestPREMTask1",
