@@ -29,24 +29,28 @@ void vPeriodicTask(void *pvParameters)
 
     while (1)
     {
-        // Get current tick count
-        TickType_t currentTick = xTaskGetTickCount();
+        // If period is 0, then no waiting
+        if (tickPeriod != 0)
+        {
+            // Get current tick count
+            TickType_t currentTick = xTaskGetTickCount();
 
-        // If there are some ticks to wait, it means that we are not sync
-        if (currentTick - xLastWakeTime < tickPeriod)
-        {
-            // Wait for the next cycle.
-            xTaskDelayUntil(&xLastWakeTime, tickPeriod);
-        }
-        else if (currentTick - xLastWakeTime > tickPeriod)
-        {
-            // We compute next sync period and wait until there to restart
-            while (currentTick - xLastWakeTime > tickPeriod)
+            // If there are some ticks to wait, it means that we are not sync
+            if (currentTick - xLastWakeTime < tickPeriod)
             {
-                TickType_t diff = currentTick - xLastWakeTime;
-                xLastWakeTime += tickPeriod;
+                // Wait for the next cycle.
+                xTaskDelayUntil(&xLastWakeTime, tickPeriod);
             }
-            xTaskDelayUntil(&xLastWakeTime, tickPeriod);
+            else if (currentTick - xLastWakeTime > tickPeriod)
+            {
+                // We compute next sync period and wait until there to restart
+                while (currentTick - xLastWakeTime > tickPeriod)
+                {
+                    TickType_t diff = currentTick - xLastWakeTime;
+                    xLastWakeTime += tickPeriod;
+                }
+                xTaskDelayUntil(&xLastWakeTime, tickPeriod);
+            }
         }
 
         // Execute task here

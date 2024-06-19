@@ -8,6 +8,10 @@
  * Structure that contains important data for the periodic task: the task's period 
  * (in tick) and the argument(s) of the task. You do not need to malloc it as it will
  * be malloc'ed and freed in xTaskPeriodicCreate.
+ * 
+ * Note that if the period is 0, then no waiting and this is equivalent to just having
+ * a normal task. This can be useful for non periodic tasks that can be executed at any
+ * time
  */
 struct periodic_arguments
 {
