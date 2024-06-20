@@ -41,8 +41,6 @@ uint64_t min_time = -1;
 uint64_t max_time = 0;
 void vMasterTask(void *pvParameters)
 {
-    printf("AAAAAAAAAAAAAAH\n");
-
     // Get time at start of computation phase
     uint64_t current_time = generic_timer_read_counter();
 
@@ -71,7 +69,7 @@ void vMasterTask(void *pvParameters)
     }
 
     // If first measurement, then display name
-    if (counter == 0)
+    if (counter++ == 0)
     {
         printf("elapsed_time_array_%dkB_prio%d_ns = [", DATA_SIZE_0, 2 * prio);
     }
