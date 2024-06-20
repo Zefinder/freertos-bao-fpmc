@@ -92,7 +92,7 @@ prefetch_loop_prem:
 wait_for_int: 
 	ldr x3, [x2]			// Load suspend prefetch
 	cmp x3, #0				// Compare if paused
-	bne prefetch_loop_prem	// If pause == 1 then loop
+	beq prefetch_loop_prem	// If suspend_prefetch == 0 then we can continue
     wfi                     // Else wait for next interrupt
     b wait_for_int          // And recheck (maybe it was IPI_RESUME)
 
