@@ -82,6 +82,7 @@ end_prefetch:
 .func 
 prefetch_data_prem:
     lsr x1, x1, #LOG2_L2_CACHE_LINE_SIZE    // x1 is now the remaining number of lines to prefetch
+    b wait_for_int                          // First check if can prefetch
 
 prefetch_loop_prem:
     prfm PLDL2KEEP, [x0]            // Prefetch L2 cache from address [x0 & ~(L2_CACHE_LINE_SIZE - 1) ; x0 | (L2_CACHE_LINE_SIZE - 1)]
@@ -89,8 +90,9 @@ prefetch_loop_prem:
     subs x1, x1, #1                 // Decrease remaining lines
     beq end_prefetch_prem           // If x1 == 0 end
 
-wait_for_int: 
-	ldr x3, [x2]			// Load suspend prefetch
+wait_for_int:
+    eor x3, x3, x3          // Reset x3
+	ldrb w3, [x2]			// Load suspend prefetch (only the byte!)
 	cmp x3, #0				// Compare if paused
 	beq prefetch_loop_prem	// If suspend_prefetch == 0 then we can continue
     wfi                     // Else wait for next interrupt
