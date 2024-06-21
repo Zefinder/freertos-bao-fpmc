@@ -18,8 +18,8 @@
 #include <benchmark.h>
 
 // Request the default IPI and memory request wait
-#ifndef DEFAULT_IPI_HANDLERS
-#error DEFAULT_IPI must be defined with value y for this test (make all ... DEFAULT_IPI=y)
+#ifdef DEFAULT_IPI_HANDLERS
+#error DEFAULT_IPI must not be defined with value y for this test (make all ... DEFAULT_IPI=y is no!)
 #endif
 
 // Task handler, change to array for multiple tasks in the future
@@ -28,105 +28,125 @@ TaskHandle_t xTaskHandler;
 #define NUMBER_OF_TESTS 90000
 #define DATA_SIZE_0 100 kB
 #define DATA_SIZE_INTERFERENCE 10 kB
+#define MAX_PRIO 0
 
 // Generic timer frequency
 uint64_t timer_frequency;
 
-uint64_t end_time = 0;
 int counter = 0;
 int print_counter = 0;
 uint32_t prio = 0;
-uint64_t fetch_sum = 0;
-uint64_t min_time = -1;
-uint64_t max_time = 0;
+volatile uint8_t suspend_prefetch = 0;
+
+void ipi_pause_handler(unsigned int id)
+{
+    enum states current_state = get_current_state();
+    if (current_state == MEMORY_PHASE)
+    {
+        // Pause task (we already are in prefetch)
+        change_state(SUSPENDED);
+        suspend_prefetch = 1;
+    }
+}
+
+void ipi_resume_handler(unsigned int id)
+{
+    enum states current_state = get_current_state();
+    if (current_state == SUSPENDED)
+    {
+        // Resume task
+        suspend_prefetch = 0;
+
+        change_state(MEMORY_PHASE);
+    }
+}
+
+void PREMPart(void *arg)
+{
+    // Memory phase
+    union memory_request_answer answer = {.raw = request_memory_access(prio)};
+
+    // If no ack, then suspend prefetch
+    if (answer.ack == 0)
+    {
+        suspend_prefetch = 1;
+    }
+
+    // We can begin to prefetch, even if suspended it's not a big deal
+    clear_L2_cache((uint64_t)appdata, (uint64_t)DATA_SIZE_0);
+    prefetch_data_prem((uint64_t)appdata, (uint64_t)DATA_SIZE_0, &suspend_prefetch);
+
+    // Release memory
+    revoke_memory_access();
+}
+
 void vMasterTask(void *pvParameters)
 {
-    // Get time at start of computation phase
-    uint64_t current_time = generic_timer_read_counter();
+    start_benchmark();
 
-    // If first time, just reask
-    if (end_time == 0)
+    while (prio < MAX_PRIO + 1)
     {
-        end_time = current_time;
-        return;
-    }
+        // Init benchmark
+        char test_name[20];
+        sprintf(test_name, "_%dkB_prio%d", DATA_SIZE_0, prio);
+        init_benchmark(test_name, MEASURE_NANO);
 
-    // Else that means that we have a PREM fetch time
-    uint64_t fetch_time = current_time - end_time;
+        while (counter++ < NUMBER_OF_TESTS)
+        {
+            run_benchmark(PREMPart, NULL);
 
-    // Increase sum
-    fetch_sum += fetch_time;
+            // Print for each 1000 tests
+            if (++print_counter == 1000)
+            {
+                printf("\t# Number of realised tests: %d\n", counter);
+                print_counter = 0;
+            }
+        }
 
-    // Test min and max
-    if (fetch_time > max_time)
-    {
-        max_time = fetch_time;
-    }
-
-    if (fetch_time < min_time)
-    {
-        min_time = fetch_time;
-    }
-
-    // If first measurement, then display name
-    if (counter++ == 0)
-    {
-        printf("elapsed_time_array_%dkB_prio%d_ns = [", DATA_SIZE_0, 2 * prio);
-    }
-
-    // Show result and print add print counter
-    printf("%ld,", pdSYSTICK_TO_NS(timer_frequency, fetch_time));
-    if (++print_counter == 1000)
-    {
-        printf("\t# Number of realised tests: %d\n", counter);
-        print_counter = 0;
-    }
-
-    // When tests finished, show results, reset counters and increment prio
-    if (counter == NUMBER_OF_TESTS)
-    {
-        // Compute average
-        uint64_t average_time = fetch_sum / NUMBER_OF_TESTS;
-
-        // Print results
-        printf("]\n"); // End of array
-        printf("min_%dkB_prio%d_ns = %ld # ns\n", DATA_SIZE_0, prio, pdSYSTICK_TO_NS(timer_frequency, min_time));
-        printf("max_%dkB_prio%d_ns = %ld # ns\n", DATA_SIZE_0, prio, pdSYSTICK_TO_NS(timer_frequency, max_time));
-        printf("int_average_%dkB_prio%d_ns = %ld # ns\n", DATA_SIZE_0, prio, pdSYSTICK_TO_NS(timer_frequency, average_time));
-        printf("\n");
-
-        // Reset everything
-        end_time = 0;
+        // Reset counters
         counter = 0;
         print_counter = 0;
-        fetch_sum = 0;
-        min_time = -1;
-        max_time = 0;
-
-        // Increment prio
-        prio++;
+        prio += 2;
     }
 
-    // If prio > 3 then tests finished.
-    if (prio > 3)
-    {
-        end_benchmark();
-        printf("\n");
-        vTaskDelete(NULL);
-    }
-
-    // Set new old time and begin fetching again
-    end_time = generic_timer_read_counter();
+    print_benchmark_results();
+    printf("\n");
+    end_benchmark();
+    vTaskDelete(NULL);
 }
 
 void vTaskInterference(void *pvParameters)
 {
-    // Computation phase will be the sum of all elements in the array
-    uint64_t offset = (uint64_t)pvParameters;
-    uint64_t sum = 0;
-    for (int i = offset; i < offset + DATA_SIZE_INTERFERENCE; i++)
+    struct premtask_parameters *premtask_parameters = (struct premtask_parameters *)pvParameters;
+    uint32_t prio = *premtask_parameters->priority;
+    uint8_t *appdata = premtask_parameters->data;
+    uint64_t data_size = premtask_parameters->data_size;
+
+    // Always do it
+    while (1)
     {
-        sum += appdata[i];
+        // Memory phase
+        union memory_request_answer answer = {.raw = request_memory_access(prio)};
+
+        // If no ack, then suspend prefetch
+        if (answer.ack == 0)
+        {
+            suspend_prefetch = 1;
+        }
+
+        // We can begin to prefetch, even if suspended it's not a big deal
+        clear_L2_cache((uint64_t)appdata, (uint64_t)data_size);
+        prefetch_data_prem((uint64_t)appdata, (uint64_t)data_size, &suspend_prefetch);
+
+        // Release memory
+        revoke_memory_access();
+
+        // Computation phase will be the sum of all elements in the array
+        uint64_t sum = 0;
+        for (int i = 0; i < data_size; i++)
+        {
+            sum += appdata[i];
+        }
     }
 }
 
@@ -136,26 +156,25 @@ void main_app(void)
     timer_frequency = generic_timer_get_freq();
     uint64_t cpu_id = hypercall(HC_GET_CPU_ID, 0, 0, 0);
 
-    // Init and create PREM task
-    vInitPREM();
+    // IPI for everyone
+    // Enable IPI pause
+    irq_set_handler(IPI_IRQ_PAUSE, ipi_pause_handler);
+    irq_enable(IPI_IRQ_PAUSE);
+    irq_set_prio(IPI_IRQ_PAUSE, IRQ_MAX_PRIO);
+
+    // Enable IPI resume
+    irq_set_handler(IPI_IRQ_RESUME, ipi_resume_handler);
+    irq_enable(IPI_IRQ_RESUME);
+    irq_set_prio(IPI_IRQ_RESUME, IRQ_MAX_PRIO);
 
     if (cpu_id == 0)
     {
-        // Init benchmark
         printf("Begin PREM tests...\n");
-        start_benchmark();
-
-        // Fill in the struct all "interesting"
-        premtask_parameters.tickPeriod = 0;
-        premtask_parameters.data_size = DATA_SIZE_0;
-        premtask_parameters.data = appdata;
-        premtask_parameters.priority = &prio;
-        premtask_parameters.pvParameters = NULL;
-        xTaskPREMCreate(
+        xTaskCreate(
             vMasterTask,
             "MasterTask",
             configMINIMAL_STACK_SIZE,
-            premtask_parameters,
+            NULL,
             tskIDLE_PRIORITY + 1,
             &(xTaskHandler));
     }
