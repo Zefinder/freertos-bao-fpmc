@@ -49,8 +49,7 @@ void PREMPart(void *arg)
         suspend_prefetch = 1;
     }
 
-    // We can begin to prefetch, even if suspended it's not a big deal
-    clear_L2_cache((uint64_t)appdata, (uint64_t)data_size);
+    // We can begin to prefetch, even if suspended it's not a big deal (clear not in memory phase)
     prefetch_data_prem((uint64_t)appdata, (uint64_t)data_size, &suspend_prefetch);
 
     // Release memory
@@ -60,8 +59,9 @@ void PREMPart(void *arg)
 void vMasterTask(void *pvParameters)
 {
     start_benchmark();
+    printf("\t# Number of realised tests: %d\n", counter);
 
-    for (data_size = MIN_DATA_SIZE; data_size < DATA_SIZE; data_size += DATA_SIZE_INCREMENT)
+    for (data_size = MIN_DATA_SIZE; data_size <= DATA_SIZE; data_size += DATA_SIZE_INCREMENT)
     {
         // Init benchmark
         int data_size_ko = BtkB(data_size);
@@ -71,6 +71,7 @@ void vMasterTask(void *pvParameters)
 
         while (counter++ < NUMBER_OF_TESTS)
         {
+            clear_L2_cache((uint64_t)appdata, (uint64_t)data_size);
             run_benchmark(PREMPart, NULL);
 
             // Print for each 1000 tests

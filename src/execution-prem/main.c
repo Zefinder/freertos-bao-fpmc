@@ -56,7 +56,6 @@ void ipi_resume_handler(unsigned int id)
     {
         // Resume task
         suspend_prefetch = 0;
-
         change_state(MEMORY_PHASE);
     }
 }
