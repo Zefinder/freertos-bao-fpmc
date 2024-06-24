@@ -21,16 +21,23 @@
 #endif
 #endif
 
-struct task_struct
-{
-    char name[15];
-    benchmark_t benchmark_function;
-};
 uint64_t cpuid;
 volatile uint8_t ipi_received;
 uint64_t end_ipi_time;
+volatile uint64_t answer;
 
-void ipi_handler(unsigned int id)
+void ipi_id_handler(unsigned int id)
+{
+    end_ipi_time = generic_timer_read_counter();
+    ipi_received = 1;
+}
+
+void ipi_resume_handler(unsigned int id)
+{
+    answer = 1;
+}
+
+void empty_handler(unsigned int id)
 {
     end_ipi_time = generic_timer_read_counter();
     ipi_received = 1;
@@ -42,33 +49,16 @@ void bench_hypercall(void *benchmark_argument)
     hypercall(HC_EMPTY_CALL, 0, 0, 0);
 }
 
-void bench_ipi(void *benchmark_argument)
-{
-    // Send an IPI with the core (and not the hypervisor, too long!)
-    irq_send_ipi(0b0001);
-
-    // Wait for IPI (if sending an IPI is immediate, should be 0 time but not the case)
-    while (!ipi_received)
-        ;
-
-    // Reset IPI received
-    ipi_received = 0;
-}
-
-void vTask(void *pvParameters)
+void vHypercallTask(void *pvParameters)
 {
     int counter = 0;
     int print_counter = 0;
 
-    struct task_struct *task_params = (struct task_struct *)pvParameters;
-    char *name = task_params->name;
-    benchmark_t benchmark_function = task_params->benchmark_function;
-
-    init_benchmark(name, MEASURE_NANO);
+    init_benchmark("_hypercall", MEASURE_NANO);
     while (counter < NUMBER_OF_TESTS)
     {
         // Benchmark prefetching
-        run_benchmark(benchmark_function, NULL);
+        run_benchmark(bench_hypercall, NULL);
 
         // Increment counter
         counter += 1;
@@ -156,7 +146,7 @@ void vIPITask(void *pvParameters)
     vTaskDelete(NULL);
 }
 
-void vArbitrationTask(void *pvParameters)
+void vArbitrationRequestTask(void *pvParameters)
 {
     uint64_t base_frequency = generic_timer_get_freq();
 
@@ -222,6 +212,75 @@ void vArbitrationTask(void *pvParameters)
     vTaskDelete(NULL);
 }
 
+void vArbitrationRevokeTask(void *pvParameters)
+{
+    uint64_t base_frequency = generic_timer_get_freq();
+
+    // Redo benchmarking here since we don't measure time of an OS function
+    for (int prio = 0; prio <= 6; prio += 2)
+    {
+        int counter = 0;
+        int print_counter = 0;
+
+        uint64_t max_time = 0;
+        uint64_t min_time = -1;
+        uint64_t sum = 0;
+
+        // Init benchmark string
+        printf("elapsed_time_array_revoke_prio%d_ns = [", prio);
+
+        while (counter < NUMBER_OF_TESTS)
+        {
+            counter += 1;
+
+            // Ask memory access wait for access
+            answer = request_memory_access(prio);
+
+            while(!answer)
+                ;
+
+            // Revoke and measure it
+            uint64_t arbitration_time = hypercall(HC_REVOKE_MEM_ACCESS_TIMER, prio, 0, 0);
+
+            /* Benchmark stuff */
+            // Increase sum
+            sum += arbitration_time;
+
+            // Test min and max
+            if (arbitration_time > max_time)
+            {
+                max_time = arbitration_time;
+            }
+
+            if (arbitration_time < min_time)
+            {
+                min_time = arbitration_time;
+            }
+
+            // Print the result
+            printf("%ld,", pdSYSTICK_TO_NS(base_frequency, arbitration_time));
+            if (++print_counter == 1000)
+            {
+                printf("\t# Number of realised tests: %d\n", counter);
+                print_counter = 0;
+            }
+        }
+
+        // Compute average
+        uint64_t average_time = sum / NUMBER_OF_TESTS;
+
+        // Print results
+        printf("]\n"); // End of array
+        printf("min_prio%d_ns = %ld # ns\n", prio, pdSYSTICK_TO_NS(base_frequency, min_time));
+        printf("max_prio%d_ns = %ld # ns\n", prio, pdSYSTICK_TO_NS(base_frequency, max_time));
+        printf("int_average_revoke_prio%d_ns = %ld # ns\n", prio, pdSYSTICK_TO_NS(base_frequency, average_time));
+        printf("\n");
+    }
+
+    printf("\n");
+    vTaskDelete(NULL);
+}
+
 void vTaskEndBench(void *pvParameters)
 {
     end_benchmark();
@@ -231,40 +290,52 @@ void vTaskEndBench(void *pvParameters)
 void main_app(void)
 {
     // Enable interrupts for IPI test
-    irq_set_handler(IPI_IRQ_PAUSE, ipi_handler);
+    irq_set_handler(IPI_IRQ_ID, ipi_id_handler);
+    irq_enable(IPI_IRQ_ID);
+    irq_set_prio(IPI_IRQ_ID, IRQ_MAX_PRIO);
+
+    irq_set_handler(IPI_IRQ_PAUSE, empty_handler);
     irq_enable(IPI_IRQ_PAUSE);
     irq_set_prio(IPI_IRQ_PAUSE, IRQ_MAX_PRIO);
 
+    irq_set_handler(IPI_IRQ_RESUME, ipi_resume_handler);
+    irq_enable(IPI_IRQ_RESUME);
+    irq_set_prio(IPI_IRQ_RESUME, IRQ_MAX_PRIO);
+
     // Get the CPU id
     cpuid = hypercall(HC_GET_CPU_ID, 0, 0, 0);
-
-    // Create structs for tasks
-    struct task_struct hypercall_task = {.name = "_hypercall", .benchmark_function = bench_hypercall};
-    struct task_struct ipi_task = {.name = "_ipi", .benchmark_function = bench_ipi};
 
     printf("Begin microbench tests...\n");
     start_benchmark();
 
     // Create tasks
     xTaskCreate(
-        vTask,
+        vHypercallTask,
         "Microbench hypercall",
         configMINIMAL_STACK_SIZE,
         (void *)&hypercall_task,
+        tskIDLE_PRIORITY + 5,
+        (TaskHandle_t *)NULL);
+
+    xTaskCreate(
+        vIPITask,
+        "Microbench IPI",
+        configMINIMAL_STACK_SIZE,
+        NULL,
         tskIDLE_PRIORITY + 4,
         (TaskHandle_t *)NULL);
 
     xTaskCreate(
-        vTask,
-        "Microbench IPI",
+        vArbitrationRequestTask,
+        "Microbench request",
         configMINIMAL_STACK_SIZE,
-        (void *)&ipi_task,
+        NULL,
         tskIDLE_PRIORITY + 3,
         (TaskHandle_t *)NULL);
 
     xTaskCreate(
-        vArbitrationTask,
-        "Microbench IPI",
+        vArbitrationRevokeTask,
+        "Microbench revoke",
         configMINIMAL_STACK_SIZE,
         NULL,
         tskIDLE_PRIORITY + 2,
