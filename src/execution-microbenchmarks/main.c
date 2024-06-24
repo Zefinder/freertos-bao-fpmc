@@ -16,9 +16,9 @@
 
 #define NUMBER_OF_TESTS 1000000
 #ifdef configUSE_PREEMPTION
-    #if configUSE_PREEMPTION == 1
-        #error Preemption must be disabled for this test... put configUSE_PREEMPTION to 0 in FreeRTOSConfig.h
-    #endif
+#if configUSE_PREEMPTION == 1
+#error Preemption must be disabled for this test... put configUSE_PREEMPTION to 0 in FreeRTOSConfig.h
+#endif
 #endif
 
 struct task_struct
@@ -28,13 +28,11 @@ struct task_struct
 };
 uint64_t cpuid;
 volatile uint8_t ipi_received;
+uint64_t end_ipi_time;
 
-void empty_handler()
+void ipi_handler(unsigned int id)
 {
-}
-
-void ipi_handler()
-{
+    end_ipi_time = generic_timer_read_counter();
     ipi_received = 1;
 }
 
@@ -89,6 +87,75 @@ void vTask(void *pvParameters)
     vTaskDelete(NULL);
 }
 
+void vIPITask(void *pvParameters)
+{
+    uint64_t base_frequency = generic_timer_get_freq();
+
+    // Redo benchmarking here since we don't measure time of an OS function
+    int counter = 0;
+    int print_counter = 0;
+
+    uint64_t max_time = 0;
+    uint64_t min_time = -1;
+    uint64_t sum = 0;
+
+    // Init benchmark string
+    printf("elapsed_time_array_ipi_ns = [");
+
+    while (counter < NUMBER_OF_TESTS)
+    {
+        counter += 1;
+
+        // Send the hypercall to measure IPI, the result is the start time
+        uint64_t start_ipi_time = hypercall(HC_MEASURE_IPI, 0, 0, 0);
+
+        // Wait for IPI (if sending an IPI is immediate, should be 0 time but not the case)
+        while (!ipi_received)
+            ;
+
+        // Reset IPI received
+        ipi_received = 0;
+
+        // Compute the time taken by the IPI
+        uint64_t ipi_time = end_ipi_time - start_ipi_time;
+
+        /* Benchmark stuff */
+        // Increase sum
+        sum += ipi_time;
+
+        // Test min and max
+        if (ipi_time > max_time)
+        {
+            max_time = ipi_time;
+        }
+
+        if (ipi_time < min_time)
+        {
+            min_time = ipi_time;
+        }
+
+        // Print the result
+        printf("%ld,", pdSYSTICK_TO_NS(base_frequency, ipi_time));
+        if (++print_counter == 1000)
+        {
+            printf("\t# Number of realised tests: %d\n", counter);
+            print_counter = 0;
+        }
+    }
+
+    // Compute average
+    uint64_t average_time = sum / NUMBER_OF_TESTS;
+
+    // Print results
+    printf("]\n"); // End of array
+    printf("min_ipi_ns = %ld # ns\n", pdSYSTICK_TO_NS(base_frequency, min_time));
+    printf("max_ipi_ns = %ld # ns\n", pdSYSTICK_TO_NS(base_frequency, max_time));
+    printf("int_average_ipi_ns = %ld # ns\n", pdSYSTICK_TO_NS(base_frequency, average_time));
+    printf("\n");
+
+    vTaskDelete(NULL);
+}
+
 void vArbitrationTask(void *pvParameters)
 {
     uint64_t base_frequency = generic_timer_get_freq();
@@ -133,11 +200,11 @@ void vArbitrationTask(void *pvParameters)
 
             // Print the result
             printf("%ld,", pdSYSTICK_TO_NS(base_frequency, arbitration_time));
-			if (++print_counter == 1000)
-			{
-				printf("\t# Number of realised tests: %d\n", counter);
-				print_counter = 0;
-			}
+            if (++print_counter == 1000)
+            {
+                printf("\t# Number of realised tests: %d\n", counter);
+                print_counter = 0;
+            }
         }
 
         // Compute average
@@ -164,17 +231,9 @@ void vTaskEndBench(void *pvParameters)
 void main_app(void)
 {
     // Enable interrupts for IPI test
-    irq_set_handler(IPI_IRQ_ID, ipi_handler);
-    irq_enable(IPI_IRQ_ID);
-    irq_set_prio(IPI_IRQ_ID, IRQ_MAX_PRIO);
-
-    irq_set_handler(IPI_IRQ_PAUSE, empty_handler);
+    irq_set_handler(IPI_IRQ_PAUSE, ipi_handler);
     irq_enable(IPI_IRQ_PAUSE);
     irq_set_prio(IPI_IRQ_PAUSE, IRQ_MAX_PRIO);
-
-    irq_set_handler(IPI_IRQ_RESUME, empty_handler);
-    irq_enable(IPI_IRQ_RESUME);
-    irq_set_prio(IPI_IRQ_RESUME, IRQ_MAX_PRIO);
 
     // Get the CPU id
     cpuid = hypercall(HC_GET_CPU_ID, 0, 0, 0);
