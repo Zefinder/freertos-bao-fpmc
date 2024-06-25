@@ -161,7 +161,7 @@ void vArbitrationRequestTask(void *pvParameters)
         uint64_t sum = 0;
 
         // Init benchmark string
-        printf("elapsed_time_array_prio%d_ns = [", prio);
+        printf("elapsed_time_array_request_prio%d_ns = [", prio);
 
         while (counter < NUMBER_OF_TESTS)
         {
@@ -202,13 +202,12 @@ void vArbitrationRequestTask(void *pvParameters)
 
         // Print results
         printf("]\n"); // End of array
-        printf("min_prio%d_ns = %ld # ns\n", prio, pdSYSTICK_TO_NS(base_frequency, min_time));
-        printf("max_prio%d_ns = %ld # ns\n", prio, pdSYSTICK_TO_NS(base_frequency, max_time));
-        printf("int_average_prio%d_ns = %ld # ns\n", prio, pdSYSTICK_TO_NS(base_frequency, average_time));
+        printf("min_request_prio%d_ns = %ld # ns\n", prio, pdSYSTICK_TO_NS(base_frequency, min_time));
+        printf("max_request_prio%d_ns = %ld # ns\n", prio, pdSYSTICK_TO_NS(base_frequency, max_time));
+        printf("int_average_request_prio%d_ns = %ld # ns\n", prio, pdSYSTICK_TO_NS(base_frequency, average_time));
         printf("\n");
     }
 
-    printf("\n");
     vTaskDelete(NULL);
 }
 
@@ -233,11 +232,8 @@ void vArbitrationRevokeTask(void *pvParameters)
         {
             counter += 1;
 
-            // Ask memory access wait for access
+            // Ask memory access, don't care of access since we will never have priority on interferences
             answer = request_memory_access(prio);
-
-            while(!answer)
-                ;
 
             // Revoke and measure it
             uint64_t arbitration_time = hypercall(HC_REVOKE_MEM_ACCESS_TIMER, prio, 0, 0);
@@ -271,13 +267,12 @@ void vArbitrationRevokeTask(void *pvParameters)
 
         // Print results
         printf("]\n"); // End of array
-        printf("min_prio%d_ns = %ld # ns\n", prio, pdSYSTICK_TO_NS(base_frequency, min_time));
-        printf("max_prio%d_ns = %ld # ns\n", prio, pdSYSTICK_TO_NS(base_frequency, max_time));
+        printf("min_revoke_prio%d_ns = %ld # ns\n", prio, pdSYSTICK_TO_NS(base_frequency, min_time));
+        printf("max_revoke_prio%d_ns = %ld # ns\n", prio, pdSYSTICK_TO_NS(base_frequency, max_time));
         printf("int_average_revoke_prio%d_ns = %ld # ns\n", prio, pdSYSTICK_TO_NS(base_frequency, average_time));
         printf("\n");
     }
 
-    printf("\n");
     vTaskDelete(NULL);
 }
 
@@ -313,7 +308,7 @@ void main_app(void)
         vHypercallTask,
         "Microbench hypercall",
         configMINIMAL_STACK_SIZE,
-        (void *)&hypercall_task,
+        NULL,
         tskIDLE_PRIORITY + 5,
         (TaskHandle_t *)NULL);
 
