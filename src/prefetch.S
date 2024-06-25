@@ -36,6 +36,58 @@ end_flush:
     ret
 .endfunc
 
+.global clear_L2_cache_CISW
+.type clear_L2_cache_CISW, %function
+.section .text
+
+/*
+ * void clear_L2_cache_CISW(start_way, end_way, start_set, end_set)
+ */
+.func 
+clear_L2_cache_CISW:
+#define StartWay x0
+#define EndWay x1
+#define StartSet x2
+#define EndSet x3
+#define Level  x9
+#define SetWay x10
+#define Ways   x11
+#define Sets   x12
+
+	MOV   Level, #2
+	MOV   Ways, EndWay
+clear_cache_partition_L2_loop_reset_sets:
+	MOV   Sets, EndSet
+clear_cache_partition_L2_loop:
+	ADD   SetWay, Level, Ways, LSL #28  // create new bitfield: level and ways
+	ADD   SetWay, SetWay, Sets, LSL #6 // create new bitfield: add sets
+	DC    CISW, SetWay                        // clear invalidate set way
+	CMP   Sets, StartSet
+	Bls   clear_cache_partition_L2_dec_way    // if Sets == 0: all the sets cleared -> next way
+	SUB   Sets, Sets, #1                      // next set
+	B     clear_cache_partition_L2_loop
+clear_cache_partition_L2_dec_way:
+	CMP   Ways, StartWay
+	Bls   clear_cache_partition_L2_end_loop   // ways are 0 so we are done
+	SUB   Ways, Ways, #1                      // next way
+	B     clear_cache_partition_L2_loop_reset_sets
+clear_cache_partition_L2_end_loop:
+
+	/* flush pipeline */
+	dsb   SY
+	isb
+	ret
+
+#undef StartWay
+#undef EndWay
+#undef StartSet
+#undef EndSet
+#undef Level
+#undef SetWay
+#undef Ways
+#undef Sets
+.endfunc
+
 .global prefetch_data
 .type prefetch_data, %function
 .section .text

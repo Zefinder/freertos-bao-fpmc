@@ -40,7 +40,8 @@ volatile uint8_t suspend_prefetch = 0;
 
 void clear_cache(void* arg)
 {
-    clear_L2_cache((uint64_t)appdata, (uint64_t)data_size);
+    // clear_L2_cache_CISW((uint64_t)0, (uint64_t)15, (uint64_t)0, (uint64_t)(((0x100000 / 16) / 4) - 1));
+    clear_L2_cache((uint64_t)appdata, 1024 kB);
 }
 
 void vMasterTask(void *pvParameters)
