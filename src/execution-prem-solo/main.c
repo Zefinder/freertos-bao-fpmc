@@ -49,7 +49,10 @@ void PREMPart(void *arg)
         suspend_prefetch = 1;
     }
 
-    // We can begin to prefetch, even if suspended it's not a big deal (clear not in memory phase)
+    // Clear cache
+    clear_L2_cache((uint64_t)appdata, (uint64_t)data_size);
+
+    // We can begin to prefetch, even if suspended it's not a big deal
     prefetch_data_prem((uint64_t)appdata, (uint64_t)data_size, &suspend_prefetch);
 
     // Release memory
@@ -71,7 +74,6 @@ void vMasterTask(void *pvParameters)
 
         while (counter++ < NUMBER_OF_TESTS)
         {
-            clear_L2_cache((uint64_t)appdata, (uint64_t)data_size);
             run_benchmark(PREMPart, NULL);
 
             // Print for each 1000 tests
