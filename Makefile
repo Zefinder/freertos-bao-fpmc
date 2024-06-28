@@ -7,7 +7,8 @@ BUILD_DIR:=$(ROOT_DIR)/build/$(PLATFORM)
 bmrt_dir:=$(ROOT_DIR)/src/baremetal-runtime
 include $(bmrt_dir)/setup.mk
 
-# Inlcude all freertos sources
+# From here we know that platform is defined
+CPPFLAGS+=-DPLATFORM=$(PLATFORM)
 
 # Main freertos application sources
 app_src_dir:=$(ROOT_DIR)/src
