@@ -10,7 +10,7 @@
 enum hypervisor_actions { HC_IPC = 1, HC_REQUEST_MEM_ACCESS = 2, HC_REVOKE_MEM_ACCESS = 3, HC_GET_CPU_ID = 4, HC_NOTIFY_CPU = 5, HC_EMPTY_CALL = 6, HC_REQUEST_MEM_ACCESS_TIMER = 7, HC_DISPLAY_STRING = 8, HC_MEASURE_IPI = 9, HC_REVOKE_MEM_ACCESS_TIMER = 10 };
 
 /* Hypercall with the specified action and arguments */
-uint64_t hypercall(enum hypervisor_actions, int arg0, int arg1, int arg2);
+uint64_t hypercall(enum hypervisor_actions action, uint64_t arg0, uint64_t arg1, uint64_t arg2);
 
 /* Macros for memory request and revoke */
 #define request_memory_access(prio) hypercall(HC_REQUEST_MEM_ACCESS, prio, 0, 0)
