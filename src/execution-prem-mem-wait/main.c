@@ -25,13 +25,6 @@
 #error MEMORY_REQUEST_WAIT must be defined for this benchmark, (make all ... MEMORY_REQUEST_WAIT=y)
 #endif
 
-#if defined(PLATFORM) && PLATFORM == rpi4
-    // For Raspberry 4 model B, the model shows that the equation y=330x+1257ns is a good wcet approximation for solo prefetch 
-    #define TTW(timer_frequency, prefetch_size) pdNS_TO_SYSTICK(timer_frequency, (uint64_t)(330 * BtkB((uint64_t)prefetch_size) + 1257 + 25000))
-#else 
-    #define TTW(timer_frequency, prefetch_size) (0) 
-#endif
-
 // Task handler, change to array for multiple tasks in the future
 TaskHandle_t xTaskHandler;
 
@@ -127,8 +120,8 @@ void vMasterTask(void *pvParameters)
                 print_counter = 0;
             }
 
-            // Wait for 3 x worst case of prefetching DATA_SIZE_0 kB
-            vTaskPREMDelay(3 * TTW(timer_frequency, DATA_SIZE_0));
+            // Wait for 3 x last time
+            vTaskPREMDelay(3 * get_last_measured_time());
         }
 
         // Reset counters

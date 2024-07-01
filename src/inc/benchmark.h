@@ -1,6 +1,8 @@
 #ifndef __BENCHMARK_H__
 #define __BENCHMARK_H__
 
+#include <FreeRTOS.h>
+
 /* Defines the measurement unit for benchmarks */
 #define MEASURE_NANO 1
 #define MEASURE_MICRO 0
@@ -9,13 +11,13 @@
 typedef void (*benchmark_t)(void*);
 
 /* Get minimum execution time in ticks */
-int get_minimum_time();
+uint64_t get_minimum_time();
 
 /* Get maximum execution time in ticks */
-int get_maximum_time();
+uint64_t get_maximum_time();
 
 /* Get average execution time in ticks */
-int get_average_time();
+uint64_t get_average_time();
 
 /*
  * Run the benchmark! It means running the code once while measuring the
@@ -58,7 +60,7 @@ void init_benchmark(char *benchmark_name, int use_nano);
 /* 
  * Returns the last measured time, or 0 if no time measured
  */
-uint64_t get_benchmark_time();
+uint64_t get_last_measured_time();
 
 /*
  * Print all times, the min, the max and the int average, ideal for a

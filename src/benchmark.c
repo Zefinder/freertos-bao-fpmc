@@ -21,7 +21,7 @@ int test_counter = 0;
 
 uint64_t base_frequency;
 
-int get_minimum_time()
+uint64_t get_minimum_time()
 {
     int min_time;
     if (nanotime)
@@ -35,7 +35,7 @@ int get_minimum_time()
     return min_time;
 }
 
-int get_maximum_time()
+uint64_t get_maximum_time()
 {
     int max_time;
     if (nanotime)
@@ -49,7 +49,7 @@ int get_maximum_time()
     return max_time;
 }
 
-int get_average_time()
+uint64_t get_average_time()
 {
     average = sum / test_counter;
     int average_time;
@@ -95,10 +95,12 @@ void run_benchmark(benchmark_t benchmark_code, void *benchmark_argument)
     if (nanotime)
     {
         measured_time = pdSYSTICK_TO_NS(base_frequency, elapsedTime);
+        last_measured_time = measured_time;
     }
     else
     {
         measured_time = pdSYSTICK_TO_US(base_frequency, elapsedTime);
+        last_measured_time = pdSYSTICK_TO_NS(base_frequency, elapsedTime);
     }
 
     printf("%ld,", measured_time);
@@ -144,7 +146,7 @@ void init_benchmark(char *benchmark_name, int use_nano)
     }
 }
 
-uint64_t get_benchmark_time()
+uint64_t get_last_measured_time()
 {
     return last_measured_time;
 }
