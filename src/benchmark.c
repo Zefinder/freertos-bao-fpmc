@@ -10,6 +10,9 @@ uint64_t min = -1;
 uint64_t max = 0;
 uint64_t average = 0;
 
+// Last measured time
+uint64_t last_measured_time = 0;
+
 // Benchmark config
 char *bench_name;
 int nanotime;
@@ -122,6 +125,9 @@ void init_benchmark(char *benchmark_name, int use_nano)
     sum = 0;
     average = 0;
 
+    // Reset last measured time
+    last_measured_time = 0;
+
     // Reset test counter
     test_counter = 0;
 
@@ -136,6 +142,11 @@ void init_benchmark(char *benchmark_name, int use_nano)
     {
         printf("elapsed_time_array%s = [", bench_name);
     }
+}
+
+uint64_t get_benchmark_time()
+{
+    return last_measured_time;
 }
 
 void print_benchmark_results()

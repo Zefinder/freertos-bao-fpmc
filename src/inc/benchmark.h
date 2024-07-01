@@ -55,6 +55,11 @@ void run_benchmark(benchmark_t benchmark_code, void *benchmark_argument);
  */
 void init_benchmark(char *benchmark_name, int use_nano);
 
+/* 
+ * Returns the last measured time, or 0 if no time measured
+ */
+uint64_t get_benchmark_time();
+
 /*
  * Print all times, the min, the max and the int average, ideal for a
  * copy to put it on python and compute other things that can require
