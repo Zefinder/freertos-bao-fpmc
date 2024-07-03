@@ -26,6 +26,16 @@ volatile uint8_t ipi_received;
 uint64_t end_ipi_time;
 volatile uint64_t answer;
 
+void wait_for(uint64_t waitingTicks)
+{
+    uint64_t current_time = generic_timer_read_counter();
+    uint64_t end_time = current_time + waitingTicks;
+    while (current_time < end_time)
+    {
+        current_time = generic_timer_read_counter();
+    }
+}
+
 void ipi_id_handler(unsigned int id)
 {
     end_ipi_time = generic_timer_read_counter();
@@ -131,6 +141,9 @@ void vIPITask(void *pvParameters)
             printf("\t# Number of realised tests: %d\n", counter);
             print_counter = 0;
         }
+
+        // Wait for a bit to release stress (10µs)
+        wait_for(pdUS_TO_SYSTICK(base_frequency, 10));
     }
 
     // Compute average
