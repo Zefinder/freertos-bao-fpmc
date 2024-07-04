@@ -61,6 +61,7 @@ void bench_hypercall(void *benchmark_argument)
 
 void vHypercallTask(void *pvParameters)
 {
+    uint64_t base_frequency = generic_timer_get_freq();
     int counter = 0;
     int print_counter = 0;
 
@@ -79,6 +80,9 @@ void vHypercallTask(void *pvParameters)
             printf("\t# Number of realised tests: %d\n", counter);
             print_counter = 0;
         }
+
+        // Wait for a bit to release stress (10µs)
+        wait_for(pdUS_TO_SYSTICK(base_frequency, 10));
     }
 
     // Show results and destroy task
