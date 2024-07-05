@@ -81,8 +81,8 @@ void vHypercallTask(void *pvParameters)
             print_counter = 0;
         }
 
-        // Wait for a bit to release stress (10µs)
-        wait_for(pdUS_TO_SYSTICK(base_frequency, 10));
+        // Wait for a bit to release stress (100µs)
+        wait_for(pdUS_TO_SYSTICK(base_frequency, 100));
     }
 
     // Show results and destroy task
@@ -146,8 +146,8 @@ void vIPITask(void *pvParameters)
             print_counter = 0;
         }
 
-        // Wait for a bit to release stress (10µs)
-        wait_for(pdUS_TO_SYSTICK(base_frequency, 10));
+        // Wait for a bit to release stress (100µs)
+        wait_for(pdUS_TO_SYSTICK(base_frequency, 100));
     }
 
     // Compute average
@@ -212,6 +212,9 @@ void vArbitrationRequestTask(void *pvParameters)
                 printf("\t# Number of realised tests: %d\n", counter);
                 print_counter = 0;
             }
+            
+            // Wait for a bit to release stress (100µs)
+            wait_for(pdUS_TO_SYSTICK(base_frequency, 100));
         }
 
         // Compute average
@@ -251,6 +254,9 @@ void vArbitrationRevokeTask(void *pvParameters)
 
             // Ask memory access, don't care of access since we will never have priority on interferences
             answer = request_memory_access(prio);
+
+            // Wait for a bit to release stress (100µs)
+            wait_for(pdUS_TO_SYSTICK(base_frequency, 100));
 
             // Revoke and measure it
             uint64_t arbitration_time = hypercall(HC_REVOKE_MEM_ACCESS_TIMER, prio, 0, 0);
