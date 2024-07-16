@@ -44,13 +44,7 @@ void PREMPart(void *arg)
     union memory_request_answer answer = {.raw = request_memory_access(0)};
 
     // If no ack, then suspend prefetch
-    if (answer.ack == 0)
-    {
-        suspend_prefetch = 1;
-    }
-
-    // Clear cache
-    clear_L2_cache((uint64_t)appdata, (uint64_t)data_size);
+    suspend_prefetch = !answer.ack;
 
     // We can begin to prefetch, even if suspended it's not a big deal
     prefetch_data_prem((uint64_t)appdata, (uint64_t)data_size, &suspend_prefetch);
@@ -74,6 +68,10 @@ void vMasterTask(void *pvParameters)
 
         while (counter++ < NUMBER_OF_TESTS)
         {
+            // Clear cache
+            clear_L2_cache((uint64_t)appdata, (uint64_t)data_size);
+
+            // Run prefetch benchmark
             run_benchmark(PREMPart, NULL);
 
             // Print for each 1000 tests
