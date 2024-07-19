@@ -63,7 +63,7 @@ void ipi_resume_handler(unsigned int id)
     }
 }
 
-void PREMPart(void *arg)
+void prefetch(void *arg)
 {
     // Change state to receive IPI 
     change_state(MEMORY_PHASE);
@@ -111,7 +111,7 @@ void vMasterTask(void *pvParameters)
 
         while (counter++ < NUMBER_OF_TESTS)
         {
-            run_benchmark(PREMPart, (void *)(DATA_SIZE_0));
+            run_benchmark(prefetch, (void *)(DATA_SIZE_0));
 
             // Print for each 1000 tests
             if (++print_counter == 1000)
@@ -143,7 +143,7 @@ void vTaskInterference(void *pvParameters)
     // Always do it
     while (1)
     {
-        PREMPart(pvParameters);
+        prefetch(pvParameters);
 
         // Computation phase will be the sum of all elements in the array
         uint64_t sum = 0;

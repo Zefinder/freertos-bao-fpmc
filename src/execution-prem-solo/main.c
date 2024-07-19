@@ -38,7 +38,7 @@ int print_counter = 0;
 uint64_t data_size = 0;
 volatile uint8_t suspend_prefetch = 0;
 
-void PREMPart(void *arg)
+void prefetch(void *arg)
 {
     // Memory phase
     union memory_request_answer answer = {.raw = request_memory_access(0)};
@@ -72,7 +72,7 @@ void vMasterTask(void *pvParameters)
             clear_L2_cache((uint64_t)appdata, (uint64_t)data_size);
 
             // Run prefetch benchmark
-            run_benchmark(PREMPart, NULL);
+            run_benchmark(prefetch, NULL);
 
             // Print for each 1000 tests
             if (++print_counter == 1000)
@@ -93,7 +93,6 @@ void vMasterTask(void *pvParameters)
     vTaskDelete(NULL);
 }
 
-struct premtask_parameters premtask_parameters;
 void main_app(void)
 {
     timer_frequency = generic_timer_get_freq();
