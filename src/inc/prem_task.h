@@ -24,7 +24,7 @@ struct premtask_parameters
     TickType_t tickPeriod;
     uint64_t data_size;
     void *data;
-    uint32_t *priority;
+    uint64_t wcet;
     void *pvParameters;
 };
 

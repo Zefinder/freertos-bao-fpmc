@@ -16,27 +16,29 @@ struct prv_premtask_parameters
     TaskFunction_t pxTaskCode;
     uint64_t data_size;
     void *data;
-    uint32_t* priority;
+    uint64_t wcet;
     void *pvParameters;
 };
 
 volatile union memory_request_answer memory_access = {.raw = 0};
 volatile uint8_t hypercalled = 0;
-// volatile uint8_t suspend_prefetch = 0;
+volatile uint8_t suspend_prefetch = 0;
+volatile uint64_t end_low_prio = 0;
 
 uint64_t sysfreq = 0;
+uint64_t cpu_priority = 0;
 
 void suspend_task()
 {
     // Wait for interrupt so we don't look at the memory for nothing
     while (!memory_access.raw)
-        __asm__ volatile ("wfi");
+        __asm__ volatile("wfi");
+
+    suspend_prefetch = 0;
 }
 
 #ifdef DEFAULT_IPI_HANDLERS
 /* Value that indicates if need to suspend prefetch (0 is no) */
-volatile uint8_t suspend_prefetch = 0;
-
 void ipi_pause_handler(unsigned int id)
 {
     enum states current_state = get_current_state();
@@ -44,7 +46,7 @@ void ipi_pause_handler(unsigned int id)
     {
         // Pause task (we already are in prefetch)
         change_state(SUSPENDED);
-		suspend_prefetch = 1;
+        suspend_prefetch = 1;
     }
 }
 
@@ -53,14 +55,40 @@ void ipi_resume_handler(unsigned int id)
     enum states current_state = get_current_state();
     if (current_state == SUSPENDED)
     {
-        // Resume task (we can either wait for first access being in prefetch)
-        memory_access.raw = 1;
-		suspend_prefetch = 0;
-
+        // Resume task
+        suspend_prefetch = 0;
         change_state(MEMORY_PHASE);
     }
 }
 #endif
+
+/*
+ * At each tick, will compute remaining time and if needs to update prio to the hypervisor.
+ *
+ * MUST verify that not in computation phase!
+ */
+void vApplicationTickHook(void)
+{
+    if (end_low_prio != 0)
+    {
+        enum states current_state = get_current_state();
+
+        // If already in computation phase, too late stop looking
+        if (current_state == COMPUTATION_PHASE)
+        {
+            end_low_prio = 0;
+        }
+        else
+        {
+            uint64_t current_time = generic_timer_read_counter();
+            if (current_time >= end_low_prio)
+            {
+                end_low_prio = 0;
+                update_memory_access(cpu_priority);
+            }
+        }
+    }
+}
 
 void vTaskPREMDelay(TickType_t waitingTicks)
 {
@@ -80,72 +108,56 @@ void vPREMTask(void *pvParameters)
     // Stop scheduler to be sure to not be preempted
     vTaskSuspendAll();
 
-    // Increment hypercall counter and if it is 1, we request memory (else no)
-    if (++hypercalled == 1)
+    // If hypercall counter is 0, then we request memory
+    if (hypercalled++ == 0)
     {
-        memory_access.raw = request_memory_access(*prv_premtask_parameters->priority);
+        memory_access.raw = request_memory_access(cpu_priority, prv_premtask_parameters->wcet);
     }
 
-    // When memory access wait is defined, memory ack 1 is the only yes value
-    if (memory_access.raw != 1)
+    // Whether the answer is yes or no, if ttw is not 0 then set a number a cycles to wait before leaving low prio
+    if (memory_access.ttw != 0)
     {
-#ifdef MEMORY_REQUEST_WAIT
-        // If time to wait > 0, then hypervisor wants us to wait for a bit...
-        // Just wait, no need to enable the scheduler since all hypercall will result in wait
-        // If you waited to short, then rewait (if preemption in the future?)
-        while (memory_access.ttw != 0)
-        {
-            // Wait for this duration and then make an hypercall
-            vTaskPREMDelay(memory_access.ttw);
-            memory_access.raw = request_memory_access(*prv_premtask_parameters->priority);
+        // Compute cycles to wait
+        end_low_prio = generic_timer_read_counter() + memory_access.ttw;
+    }
 
-            // Even if the answer is 1, we re-enable the scheduler since the task was waiting!
-            // Maybe a higher priority task is ready, we need to verify that!
-            // Even if no task is waiting, it's only losing a few cycles so it's ok
-        }
-#endif
-
-        // Suspended state (resume scheduler to allow preemption)
+    // If answer is no, then set suspended
+    if (memory_access.ack == 0)
+    {
         change_state(SUSPENDED);
+        suspend_prefetch = 1;
+
+        // Re-enable scheduler so higher prio tasks can take over
         xTaskResumeAll();
         suspend_task();
 
-        // Stop scheduler again
+        // Once got out, stop scheduler!
         vTaskSuspendAll();
     }
 
-    // Fetch
+    // Begin memory phase
     change_state(MEMORY_PHASE);
-    #ifdef DEFAULT_IPI_HANDLERS
-        prefetch_data_prem((uint64_t)prv_premtask_parameters->data, prv_premtask_parameters->data_size, &suspend_prefetch);
-    #else
-        prefetch_data((uint64_t)prv_premtask_parameters->data, prv_premtask_parameters->data_size);
-    #endif
+    prefetch_data_prem((uint64_t)prv_premtask_parameters->data, prv_premtask_parameters->data_size, &suspend_prefetch);
+
     // Revoke access and compute
     change_state(COMPUTATION_PHASE);
+    end_low_prio = 0;
     revoke_memory_access();
     prv_premtask_parameters->pxTaskCode(prv_premtask_parameters->pvParameters);
-	
-	// Clear cache (TODO Verify that it doesn't cause interferences)
-	clear_L2_cache((uint64_t)prv_premtask_parameters->data, prv_premtask_parameters->data_size);
+
+    // Clear used cache
+    clear_L2_cache((uint64_t)prv_premtask_parameters->data, prv_premtask_parameters->data_size);
 
     // Decrease hypercall counter and if it is more than 1, we request again (for preempted task)
-    if (--hypercalled)
+    if (--hypercalled != 0)
     {
-        memory_access.raw = request_memory_access(*prv_premtask_parameters->priority);
+        memory_access.raw = request_memory_access(cpu_priority, prv_premtask_parameters->wcet);
 
-#ifdef MEMORY_REQUEST_WAIT
-        // Same thing here, if the hypervisor wants to wait, then we wait... instead of giving the hand.
-        // This allows to not put these checks in handlers and allow new tasks to arrive
-        while (memory_access.ack == 0 && memory_access.ttw != 0)
+        // If there is still delay, set cycles once again
+        if (memory_access.ttw != 0)
         {
-            // Wait for this duration and then make an hypercall
-            vTaskPREMDelay(memory_access.ttw);
-            memory_access.raw = request_memory_access(*prv_premtask_parameters->priority);
-
-            // This task exits and made a memory request for the next one and is sure that it didn't ask too fast (so ready to rewait...)
+            end_low_prio = generic_timer_read_counter() + memory_access.ttw;
         }
-#endif
     }
     else
     {
@@ -171,7 +183,7 @@ BaseType_t xTaskPREMCreate(TaskFunction_t pxTaskCode,
     premtask_parameters_ptr->pxTaskCode = pxTaskCode;
     premtask_parameters_ptr->data_size = premtask_parameters.data_size;
     premtask_parameters_ptr->data = premtask_parameters.data;
-    premtask_parameters_ptr->priority = premtask_parameters.priority;
+    premtask_parameters_ptr->wcet = premtask_parameters.wcet;
     premtask_parameters_ptr->pvParameters = premtask_parameters.pvParameters;
 
     // Create a periodic task with custom arguments
@@ -203,4 +215,7 @@ void vInitPREM()
 
     // Get system freq
     sysfreq = generic_timer_get_freq();
+
+    // Set CPU priority
+    cpu_priority = hypercall(HC_GET_CPU_ID, 0, 0, 0);
 }

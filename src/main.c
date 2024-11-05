@@ -108,11 +108,6 @@ void vApplicationStackOverflowHook(TaskHandle_t pxTask, char *pcTaskName)
 }
 /*-----------------------------------------------------------*/
 
-void vApplicationTickHook(void)
-{
-}
-/*-----------------------------------------------------------*/
-
 void vAssertCalled(void)
 {
     volatile uint32_t ulSetTo1ToExitFunction = 0;

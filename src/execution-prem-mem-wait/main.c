@@ -18,11 +18,11 @@
 #include <benchmark.h>
 
 // Request the default IPI and memory request wait
-#ifdef DEFAULT_IPI_HANDLERS
-#error DEFAULT_IPI must not be defined with value y for this test (make all ... DEFAULT_IPI=n)
+#ifndef DEFAULT_IPI_HANDLERS
+    #error DEFAULT_IPI must be defined with value y for this test (make all ... DEFAULT_IPI=y)
 #endif
 #ifndef MEMORY_REQUEST_WAIT
-#error MEMORY_REQUEST_WAIT must be defined for this benchmark, (make all ... MEMORY_REQUEST_WAIT=y)
+    #error MEMORY_REQUEST_WAIT must be defined for this benchmark, (make all ... MEMORY_REQUEST_WAIT=y)
 #endif
 
 // Task handler, change to array for multiple tasks in the future
@@ -39,160 +39,118 @@ uint64_t timer_frequency;
 int counter = 0;
 int print_counter = 0;
 uint32_t prio = 0;
-volatile uint8_t suspend_prefetch = 0;
-
-void ipi_pause_handler(unsigned int id)
-{
-    enum states current_state = get_current_state();
-    if (current_state == MEMORY_PHASE)
-    {
-        // Pause task (we already are in prefetch)
-        change_state(SUSPENDED);
-        suspend_prefetch = 1;
-    }
-}
-
-void ipi_resume_handler(unsigned int id)
-{
-    enum states current_state = get_current_state();
-    if (current_state == SUSPENDED)
-    {
-        // Resume task
-        suspend_prefetch = 0;
-        change_state(MEMORY_PHASE);
-    }
-}
-
-void prefetch(void *arg)
-{
-    // Change state to receive IPI 
-    change_state(MEMORY_PHASE);
-
-    // Memory phase
-    union memory_request_answer answer = {.raw = request_memory_access(prio)};
-
-    // If no ack then test if need to wait
-    if (answer.ack == 0)
-    {
-        // Time to wait not 0, so we wait before asking again
-        if (answer.ttw != 0)
-        {
-            vTaskPREMDelay(answer.ttw);
-            // From here we know for sure that we waited enough! (Add a barrier?)
-            answer.raw = request_memory_access(prio);
-            suspend_prefetch = !answer.ack; // if ack is 1, then no suspend!
-        }
-        else
-        {
-            // No waiting was needed so just suspend
-            suspend_prefetch = 1;
-        }
-    }
-
-    // We can begin to prefetch, even if suspended it's not a big deal
-    clear_L2_cache((uint64_t)appdata, (uint64_t)arg);
-    prefetch_data_prem((uint64_t)appdata, (uint64_t)arg, &suspend_prefetch);
-
-    // Changing state and release memory
-    change_state(WAITING);
-    revoke_memory_access();
-}
+volatile uint64_t summm = 0;
 
 void vMasterTask(void *pvParameters)
 {
-    start_benchmark();
+    // start_benchmark();
 
-    while (prio < MAX_PRIO + 1)
+    // while (prio < MAX_PRIO + 1)
+    // {
+    //     // Init benchmark
+    //     char test_name[20];
+    //     sprintf(test_name, "_%dkB_prio%d_interference%dkB", BtkB(DATA_SIZE_0), prio, BtkB(DATA_SIZE_INTERFERENCE));
+    //     init_benchmark(test_name, MEASURE_NANO);
+
+    //     while (counter++ < NUMBER_OF_TESTS)
+    //     {
+    //         run_benchmark(prefetch, (void *)(DATA_SIZE_0));
+
+    //         // Print for each 1000 tests
+    //         if (++print_counter == 1000)
+    //         {
+    //             printf("\t# Number of realised tests: %d\n", counter);
+    //             print_counter = 0;
+    //         }
+
+    //         // Wait for 3 x last time
+    //         vTaskPREMDelay(3 * get_last_measured_time());
+    //     }
+
+    //     // Reset counters
+    //     counter = 0;
+    //     print_counter = 0;
+    //     prio += 2;
+
+    //     // Print results
+    //     print_benchmark_results();
+    //     printf("\n");
+    // }
+
+    // end_benchmark();
+    // vTaskDelete(NULL);
+    // printf("Coucou!\n");
+    for (int i = 0; i < DATA_SIZE_INTERFERENCE; i++)
     {
-        // Init benchmark
-        char test_name[20];
-        sprintf(test_name, "_%dkB_prio%d_interference%dkB", BtkB(DATA_SIZE_0), prio, BtkB(DATA_SIZE_INTERFERENCE));
-        init_benchmark(test_name, MEASURE_NANO);
-
-        while (counter++ < NUMBER_OF_TESTS)
-        {
-            run_benchmark(prefetch, (void *)(DATA_SIZE_0));
-
-            // Print for each 1000 tests
-            if (++print_counter == 1000)
-            {
-                printf("\t# Number of realised tests: %d\n", counter);
-                print_counter = 0;
-            }
-
-            // Wait for 3 x last time
-            vTaskPREMDelay(3 * get_last_measured_time());
-        }
-
-        // Reset counters
-        counter = 0;
-        print_counter = 0;
-        prio += 2;
-
-        // Print results
-        print_benchmark_results();
-        printf("\n");
+        summm += appdata[i];
     }
-
-    end_benchmark();
-    vTaskDelete(NULL);
+    summm = 0;
 }
 
-void vTaskInterference(void *pvParameters)
-{
-    // Always do it
-    while (1)
-    {
-        prefetch(pvParameters);
+// void vTaskInterference(void *pvParameters)
+// {
+//     // Always do it
+//     while (1)
+//     {
+//         // prefetch(pvParameters);
 
-        // Computation phase will be the sum of all elements in the array
-        uint64_t sum = 0;
-        for (int i = 0; i < DATA_SIZE_INTERFERENCE; i++)
-        {
-            sum += appdata[i];
-        }
-    }
-}
+//         // Computation phase will be the sum of all elements in the array
+//         uint64_t sum = 0;
+//         for (int i = 0; i < DATA_SIZE_INTERFERENCE; i++)
+//         {
+//             sum += appdata[i];
+//         }
+//     }
+// }
 
 void main_app(void)
 {
     timer_frequency = generic_timer_get_freq();
     uint64_t cpu_id = hypercall(HC_GET_CPU_ID, 0, 0, 0);
 
-    // IPI for everyone
-    // Enable IPI pause
-    irq_set_handler(IPI_IRQ_PAUSE, ipi_pause_handler);
-    irq_enable(IPI_IRQ_PAUSE);
-    irq_set_prio(IPI_IRQ_PAUSE, IRQ_MAX_PRIO);
-
-    // Enable IPI resume
-    irq_set_handler(IPI_IRQ_RESUME, ipi_resume_handler);
-    irq_enable(IPI_IRQ_RESUME);
-    irq_set_prio(IPI_IRQ_RESUME, IRQ_MAX_PRIO);
-
     if (cpu_id == 0)
     {
-        printf("Begin PREM tests...\n");
-        xTaskCreate(
+        // printf("Begin PREM tests...\n");
+        // xTaskCreate(
+        //     vMasterTask,
+        //     "MasterTask",
+        //     configMINIMAL_STACK_SIZE,
+        //     NULL,
+        //     tskIDLE_PRIORITY + 1,
+        //     &(xTaskHandler));
+
+        struct premtask_parameters parameters1 = {.tickPeriod=10, .data_size=MAX_DATA_SIZE, .data=appdata, .wcet=10000000, .pvParameters=NULL};
+
+        xTaskPREMCreate(
             vMasterTask,
-            "MasterTask",
+            "Master task1",
             configMINIMAL_STACK_SIZE,
-            NULL,
-            tskIDLE_PRIORITY + 1,
-            &(xTaskHandler));
-    }
-    else
-    {
-        // Just interferences, the goal is to interfere, give the parameters to fetch... (cpu_id and prefetch offset)
-        prio = 2 * cpu_id - 1;
-        xTaskCreate(
-            vTaskInterference,
-            "Interference",
+            parameters1,
+            0,
+            NULL
+        );
+
+        xTaskPREMCreate(
+            vMasterTask,
+            "Master task1",
             configMINIMAL_STACK_SIZE,
-            (void *)(DATA_SIZE_INTERFERENCE),
-            tskIDLE_PRIORITY + 1,
-            NULL);
+            parameters1,
+            1,
+            NULL
+        );
     }
+    // else
+    // {
+    //     // Just interferences, the goal is to interfere, give the parameters to fetch... (cpu_id and prefetch offset)
+    //     prio = 2 * cpu_id - 1;
+    //     xTaskCreate(
+    //         vTaskInterference,
+    //         "Interference",
+    //         configMINIMAL_STACK_SIZE,
+    //         (void *)(DATA_SIZE_INTERFERENCE),
+    //         tskIDLE_PRIORITY + 1,
+    //         NULL);
+    // }
 
     vTaskStartScheduler();
 }
