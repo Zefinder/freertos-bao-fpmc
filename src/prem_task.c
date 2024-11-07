@@ -16,6 +16,7 @@ struct prv_premtask_parameters
     TaskFunction_t pxTaskCode;
     uint64_t data_size;
     void *data;
+    BaseType_t priority;
     uint64_t wcet;
     void *pvParameters;
 };
@@ -27,6 +28,14 @@ volatile uint64_t end_low_prio = 0;
 
 uint64_t sysfreq = 0;
 uint64_t cpu_priority = 0;
+
+uint64_t start_time = 0;
+
+#ifdef MEASURE_RESPONSE_TIME
+uint8_t measure_response_time = 1;
+#else
+uint8_t measure_response_time = 0;
+#endif
 
 void suspend_task()
 {
@@ -164,6 +173,15 @@ void vPREMTask(void *pvParameters)
         memory_access.raw = 0;
     }
 
+    // Measure response time (Write from hypervisor task priority and response time)
+    if (measure_response_time)
+    {
+        uint64_t end_time = generic_timer_read_counter();
+        uint64_t release_time = pdTICKS_TO_SYSTICK(sysfreq, get_last_period_start(prv_premtask_parameters->priority));
+        uint64_t response_time = end_time - release_time;
+        hypercall(HC_DISPLAY_RESULTS, prv_premtask_parameters->priority, response_time, 0);
+    }
+
     // Wait (resume scheduler)
     change_state(WAITING);
     xTaskResumeAll();
@@ -183,6 +201,7 @@ BaseType_t xTaskPREMCreate(TaskFunction_t pxTaskCode,
     premtask_parameters_ptr->pxTaskCode = pxTaskCode;
     premtask_parameters_ptr->data_size = premtask_parameters.data_size;
     premtask_parameters_ptr->data = premtask_parameters.data;
+    premtask_parameters_ptr->priority = uxPriority;
     premtask_parameters_ptr->wcet = premtask_parameters.wcet;
     premtask_parameters_ptr->pvParameters = premtask_parameters.pvParameters;
 
@@ -200,6 +219,9 @@ BaseType_t xTaskPREMCreate(TaskFunction_t pxTaskCode,
 
 void vInitPREM()
 {
+    // Init periodic tasks
+    vInitPeriodic();
+
 // Only set handlers iff they are defined before
 #ifdef DEFAULT_IPI_HANDLERS
     // Enable IPI pause

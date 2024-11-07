@@ -42,14 +42,24 @@
 #define pdMS_TO_SYSTICK(sysfreq, time) (((uint64_t)time * (uint64_t)sysfreq) / (uint64_t)1000)
 
 /*
+ * Converts the time in ticks to a time in microseconds (useful to lose less information)
+ */
+#define pdTICKS_TO_US( xTimeInTicks )    ( ( TickType_t ) ( ( ( uint64_t ) ( xTimeInTicks ) * ( uint64_t ) 1000000U ) / ( uint64_t ) configTICK_RATE_HZ ) )
+
+/*
+ * Converts the time in microseconds to a time in ticks (useful to lose less information)
+ */
+#define pdUS_TO_TICKS( xTimeInMs )    ( ( TickType_t ) ( ( ( uint64_t ) ( xTimeInMs ) * ( uint64_t ) configTICK_RATE_HZ ) / ( uint64_t ) 1000000U ) )
+
+/*
  * Converts the time in systicks to a time in FreeRTOS ticks. The result will
  * surely be truncated, but it is the price to pay to be able to delay a task
  * for an amount of time determined by the generic timer. You can of course
  * do +1 to be sure that you don't underwait
  */
-#define pdSYSTICK_TO_TICKS(sysfreq, tickCounter) (pdMS_TO_TICKS(pdSYSTICK_TO_MS(sysfreq, tickCounter)))
+#define pdSYSTICK_TO_TICKS(sysfreq, tickCounter) (pdUS_TO_TICKS(pdSYSTICK_TO_US(sysfreq, tickCounter)))
 
-#define pdTICKS_TO_SYSTICK(sysfreq, tickCounter) (pdMS_TO_SYSTICK(sysfreq, pdTICKS_TO_MS(tickCounter)))
+#define pdTICKS_TO_SYSTICK(sysfreq, tickCounter) (pdUS_TO_SYSTICK(sysfreq, pdTICKS_TO_US(tickCounter)))
 
 /* Returns the frequency of the generic timer */
 uint64_t generic_timer_get_freq(void);

@@ -4,11 +4,11 @@
 #include <FreeRTOS.h>
 #include <task.h>
 
-/* 
- * Structure that contains important data for the periodic task: the task's period 
+/*
+ * Structure that contains important data for the periodic task: the task's period
  * (in tick) and the argument(s) of the task. You do not need to malloc it as it will
  * be malloc'ed and freed in xTaskPeriodicCreate.
- * 
+ *
  * Note that if the period is 0, then no waiting and this is equivalent to just having
  * a normal task. This can be useful for non periodic tasks that can be executed at any
  * time
@@ -20,7 +20,7 @@ struct periodic_arguments
 };
 
 /*
- * Converts a frequency in hertz to a time in ticks. 
+ * Converts a frequency in hertz to a time in ticks.
  */
 #define pdFREQ_TO_TICKS(xFreq) ((TickType_t)((uint64_t)configTICK_RATE_HZ / (uint64_t)xFreq))
 
@@ -29,17 +29,16 @@ struct periodic_arguments
  *
  * Repeats the given task every tickPeriod ticks. If the task runs "late", means that
  * it executes for a longer period than expected (non schedulable), the periodic task
- * will wait the next period to start and won't try to fit in the remaining slot time
- * (see the drawing just a little after). How to overcome this? Increase the period,
- * increase the task priority, reduce memory usage (if using memory scheduling)...
+ * will try to execute it as soon as possible...
+ *
  *  ┌───────┐   ┌─────
  *  │       │   │       ... Normal execution
  * ─┘       └───┘
  * ￪            ￪
  *
- *  ┌─────| |─────┐        ┌────
- *  │             │        │      ... Late execution (preemption)
- * ─┘             └        │
+ *  ┌─────| |─────┐ ┌────
+ *  │             │ │      ... Late execution (preemption)
+ * ─┘             └─┘
  * ￪           ￪           ￪
  *
  * There must be no while(1) or for(;;) inside the task to repeat. Since it is an
@@ -49,7 +48,7 @@ struct periodic_arguments
  * pdFREQ_TO_TICKS to transform a frequency into ticks
  *
  * This is simply creating a task using xTaskCreate but makes it periodic.
- * 
+ *
  * TODO Notify somewhere that task was not schedulable (Enable tracing?)
  */
 BaseType_t xTaskPeriodicCreate(TaskFunction_t pxTaskCode,
@@ -58,5 +57,17 @@ BaseType_t xTaskPeriodicCreate(TaskFunction_t pxTaskCode,
                                const struct periodic_arguments,
                                UBaseType_t uxPriority,
                                TaskHandle_t *const pxCreatedTask);
+
+/*
+ * Gets the last period start time with the priority
+ */
+TickType_t get_last_period_start(uint8_t priority);
+
+/*
+ * This function must be called to initialise periodic tasks. If you run
+ * PREM tasks, it will be already called. Call before running tasks. RUN
+ * ONLY ONCE!
+ */
+void vInitPeriodic(void);
 
 #endif
