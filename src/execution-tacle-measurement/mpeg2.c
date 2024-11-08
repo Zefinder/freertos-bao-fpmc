@@ -13162,7 +13162,7 @@ unsigned char *get_mpeg2_oldorgframe()
   Main functions
 */
 
-void mpeg2_main( void* args )
+void mpeg2_main( void )
 {
   mpeg2_motion_estimation(
     mpeg2_oldorgframe, mpeg2_oldorgframe, mpeg2_oldorgframe, mpeg2_oldorgframe,

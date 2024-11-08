@@ -18,3 +18,4 @@ uint64_t generic_timer_read_counter(void)
 
 	return cntpct;
 }
+

@@ -117,6 +117,11 @@ void countnegative_sum( matrix Array )
   countnegative_negcnt = Ncnt;
 }
 
+unsigned char *get_countnegative_array(void) 
+{
+  
+}
+
 /*
   The main function
 */

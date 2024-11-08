@@ -16,7 +16,7 @@ struct prv_premtask_parameters
     TaskFunction_t pxTaskCode;
     uint64_t data_size;
     void *data;
-    BaseType_t priority;
+    uint8_t task_id;
     uint64_t wcet;
     void *pvParameters;
 };
@@ -26,10 +26,10 @@ volatile uint8_t hypercalled = 0;
 volatile uint8_t suspend_prefetch = 0;
 volatile uint64_t end_low_prio = 0;
 
-uint64_t sysfreq = 0;
+extern uint64_t sysfreq;
 uint64_t cpu_priority = 0;
 
-uint64_t start_time = 0;
+uint8_t task_id = 0;
 
 #ifdef MEASURE_RESPONSE_TIME
 uint8_t measure_response_time = 1;
@@ -177,9 +177,9 @@ void vPREMTask(void *pvParameters)
     if (measure_response_time)
     {
         uint64_t end_time = generic_timer_read_counter();
-        uint64_t release_time = pdTICKS_TO_SYSTICK(sysfreq, get_last_period_start(prv_premtask_parameters->priority));
+        uint64_t release_time = get_last_period_start(prv_premtask_parameters->task_id);
         uint64_t response_time = end_time - release_time;
-        hypercall(HC_DISPLAY_RESULTS, prv_premtask_parameters->priority, response_time, 0);
+        hypercall(HC_DISPLAY_RESULTS, prv_premtask_parameters->task_id, response_time, 0);
     }
 
     // Wait (resume scheduler)
@@ -194,6 +194,10 @@ BaseType_t xTaskPREMCreate(TaskFunction_t pxTaskCode,
                            UBaseType_t uxPriority,
                            TaskHandle_t *const pxCreatedTask)
 {
+    if (sysfreq == 0) {
+        sysfreq = generic_timer_get_freq();
+    }
+
     // Create and fill struct
     // This structure is NEVER freed since task is never deleted and this is always used!
     struct prv_premtask_parameters *premtask_parameters_ptr = (struct prv_premtask_parameters *)pvPortMalloc(sizeof(struct prv_premtask_parameters));
@@ -201,7 +205,7 @@ BaseType_t xTaskPREMCreate(TaskFunction_t pxTaskCode,
     premtask_parameters_ptr->pxTaskCode = pxTaskCode;
     premtask_parameters_ptr->data_size = premtask_parameters.data_size;
     premtask_parameters_ptr->data = premtask_parameters.data;
-    premtask_parameters_ptr->priority = uxPriority;
+    premtask_parameters_ptr->task_id = task_id++;
     premtask_parameters_ptr->wcet = premtask_parameters.wcet;
     premtask_parameters_ptr->pvParameters = premtask_parameters.pvParameters;
 
@@ -234,9 +238,6 @@ void vInitPREM()
     irq_enable(IPI_IRQ_RESUME);
     irq_set_prio(IPI_IRQ_RESUME, IRQ_MAX_PRIO);
 #endif
-
-    // Get system freq
-    sysfreq = generic_timer_get_freq();
 
     // Set CPU priority
     cpu_priority = hypercall(HC_GET_CPU_ID, 0, 0, 0);
