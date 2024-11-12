@@ -24,7 +24,7 @@
 /*
   Type definition for the matrix
 */
-typedef int matrix [ MAXSIZE ][ MAXSIZE ];
+typedef int matrix [ CN_MAXSIZE ][ CN_MAXSIZE ];
 
 /*
   Forward declaration of functions
@@ -32,16 +32,13 @@ typedef int matrix [ MAXSIZE ][ MAXSIZE ];
 void countnegative_initSeed( void );
 int countnegative_randomInteger( void );
 void countnegative_initialize( matrix );
-int countnegative_return( void );
-void countnegative_sum( matrix );
+int countnegative_sum( matrix );
 
 /*
   Globals
 */
 volatile int countnegative_seed;
 matrix countnegative_array;
-int countnegative_postotal, countnegative_negtotal;
-int countnegative_poscnt, countnegative_negcnt;
 
 /*
   Initializes the seed used in the random number generator.
@@ -68,9 +65,9 @@ void countnegative_initialize( matrix Array )
   register int OuterIndex, InnerIndex;
 
   _Pragma( "loopbound min 20 max 20" )
-  for ( OuterIndex = 0; OuterIndex < MAXSIZE; OuterIndex++ )
+  for ( OuterIndex = 0; OuterIndex < CN_MAXSIZE; OuterIndex++ )
     _Pragma( "loopbound min 20 max 20" )
-    for ( InnerIndex = 0; InnerIndex < MAXSIZE; InnerIndex++ )
+    for ( InnerIndex = 0; InnerIndex < CN_MAXSIZE; InnerIndex++ )
       Array[ OuterIndex ][ InnerIndex ] =  countnegative_randomInteger();
 }
 
@@ -80,29 +77,19 @@ void countnegative_init( void )
   countnegative_initialize( countnegative_array );
 }
 
-int countnegative_return( void )
-{
-  int checksum = ( countnegative_postotal +
-                   countnegative_poscnt +
-                   countnegative_negtotal +
-                   countnegative_negcnt );
-
-  return ( ( checksum == ( int )0x1778de ) ? 0 : -1 );
-}
-
-void countnegative_sum( matrix Array )
+int countnegative_sum( matrix Array )
 {
   register int Outer, Inner;
 
-  int Ptotal = 0; /* changed these to locals in order to drive worst case */
-  int Ntotal = 0;
-  int Pcnt = 0;
-  int Ncnt = 0;
+  register int Ptotal = 0; 
+  register int Ntotal = 0;
+  register int Pcnt = 0;
+  register int Ncnt = 0;
 
   _Pragma( "loopbound min 20 max 20" )
-  for ( Outer = 0; Outer < MAXSIZE; Outer++ )
+  for ( Outer = 0; Outer < CN_MAXSIZE; Outer++ )
     _Pragma( "loopbound min 20 max 20" )
-    for ( Inner = 0; Inner < MAXSIZE; Inner++ )
+    for ( Inner = 0; Inner < CN_MAXSIZE; Inner++ )
       if ( Array[ Outer ][ Inner ] >= 0 ) {
         Ptotal += Array[ Outer ][ Inner ];
         Pcnt++;
@@ -111,15 +98,12 @@ void countnegative_sum( matrix Array )
         Ncnt++;
       }
 
-  countnegative_postotal = Ptotal;
-  countnegative_poscnt = Pcnt;
-  countnegative_negtotal = Ntotal;
-  countnegative_negcnt = Ncnt;
+  return Ptotal + Pcnt + Ntotal + Ncnt;
 }
 
 unsigned char *get_countnegative_array(void) 
 {
-  
+  return (unsigned char *)countnegative_array;
 }
 
 /*

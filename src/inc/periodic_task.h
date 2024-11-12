@@ -63,6 +63,13 @@ BaseType_t xTaskPeriodicCreate(TaskFunction_t pxTaskCode,
  */
 TickType_t get_last_period_start(uint8_t priority);
 
+
+/* 
+ * Deletes the current running periodic task (for now must be non preemptive)
+ */
+void vTaskPeriodicDelete(void);
+
+
 /*
  * This function must be called to initialise periodic tasks. If you run
  * PREM tasks, it will be already called. Call before running tasks. RUN

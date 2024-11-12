@@ -88,8 +88,8 @@
 
 #define configTIMER_TASK_STACK_DEPTH ((configMINIMAL_STACK_SIZE) * 2)
 void vApplicationAssert( const char *pcFile, uint32_t ulLine );
-#define configASSERT( x )
-//#define configASSERT( x ) if( ( x ) == 0 ) vApplicationAssert( __FILE__, __LINE__ )
+// #define configASSERT( x )
+#define configASSERT( x ) if( ( x ) == 0 ) vApplicationAssert( __FILE__, __LINE__ )
 
 #define configUSE_QUEUE_SETS 1
 

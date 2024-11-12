@@ -12,9 +12,11 @@ struct prv_periodic_arguments
 };
 
 uint8_t periodic_task_number = 0;
-TickType_t starting_tick = 0;
-TickType_t *last_period_start; // Array containing all last periods
+uint64_t starting_tick = 0;
+uint64_t *last_period_start; // Array containing all last periods
 uint64_t sysfreq = 0;
+
+uint8_t kill_current_task = 0; // 1 if needs to be killed
 
 /* The periodic task */
 void vPeriodicTask(void *pvParameters)
@@ -42,10 +44,15 @@ void vPeriodicTask(void *pvParameters)
 
     while (1)
     {
-        printf("task_id: %d\n", periodic_arguments->task_id);
-
         // Execute task
         pxTaskCode(pvTaskParameters);
+
+        // If delete function called during code execution... 
+        if (kill_current_task) {
+            // Reset kill and delete
+            kill_current_task = 0;
+            vTaskDelete(NULL);
+        }
 
         // If period is 0, then no waiting
         if (tickPeriod != 0)
@@ -53,11 +60,12 @@ void vPeriodicTask(void *pvParameters)
             // Get current tick count
             uint64_t currentTick = generic_timer_read_counter();
             uint64_t next_period_start = last_period_start[task_id] + tickPeriod;
+            // printf("Current tick: %lld\nNext period: %lld\nSysticks to wait: %lld\n", currentTick, next_period_start, next_period_start - currentTick);
 
             // If a new cycle didn't start yet, then delay
             if (currentTick < next_period_start)
             {
-                printf("%lld\n", pdSYSTICK_TO_TICKS(sysfreq, next_period_start - currentTick));
+                // printf("Ticks to wait: %lld\n\n", pdSYSTICK_TO_TICKS(sysfreq, next_period_start - currentTick));
 
                 // Put the task into WAIT state, so compute the number of FreeRTOS cycles to wait
                 vTaskDelay(pdSYSTICK_TO_TICKS(sysfreq, next_period_start - currentTick));
@@ -66,6 +74,7 @@ void vPeriodicTask(void *pvParameters)
                 // So wait for the remaining number of systicks 
                 while (currentTick < next_period_start)
                 {
+                    // printf("Stuck here %d\n", task_id);
                     currentTick = generic_timer_read_counter();
                 }
             }
@@ -107,9 +116,9 @@ BaseType_t xTaskPeriodicCreate(TaskFunction_t pxTaskCode,
     struct prv_periodic_arguments *periodic_arguments_ptr = (struct prv_periodic_arguments *)pvPortMalloc(sizeof(struct prv_periodic_arguments));
 
     periodic_arguments_ptr->pxTaskCode = pxTaskCode;
-    printf("Period in ticks: %d\n", periodic_arguments.tickPeriod);
-    printf("Period in µs: %d\n", pdTICKS_TO_US(periodic_arguments.tickPeriod));
-    printf("Period in systicks: %lld\n\n", pdTICKS_TO_SYSTICK(sysfreq, periodic_arguments.tickPeriod));
+    // printf("Period in ticks: %d\n", periodic_arguments.tickPeriod);
+    // printf("Period in µs: %d\n", pdTICKS_TO_US(periodic_arguments.tickPeriod));
+    // printf("Period in systicks: %lld\n\n", pdTICKS_TO_SYSTICK(sysfreq, periodic_arguments.tickPeriod));
     periodic_arguments_ptr->systick_period = pdTICKS_TO_SYSTICK(sysfreq, periodic_arguments.tickPeriod);
     periodic_arguments_ptr->task_id = periodic_task_number++;
     periodic_arguments_ptr->pvParameters = periodic_arguments.pvParameters;
@@ -129,10 +138,12 @@ TickType_t get_last_period_start(uint8_t task_id)
     return last_period_start[task_id];
 }
 
+void vTaskPeriodicDelete() {
+    kill_current_task = 1;
+}
+
 void vInitPeriodic(void)
 {
-    printf("Task number: %d\n", periodic_task_number);
-
     // Create the array of last period times
     last_period_start = (uint64_t *)pvPortMalloc(sizeof(uint64_t) * periodic_task_number);
 }

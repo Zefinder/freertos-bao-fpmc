@@ -11,14 +11,14 @@
 #include <benchmark.h>
 #include <data.h>
 
-#define NUMBER_OF_TESTS 90000
+#define NUMBER_OF_TESTS 100000
 #define DATA_SIZE MAX_DATA_SIZE
 #define MIN_DATA_SIZE 1 kB
 #define DATA_SIZE_INCREMENT 1 kB
 
 int counter = 0;
 int print_counter = 0;
-uint64_t data_size = 0;
+volatile uint64_t data_size = 0;
 
 void prefetch(void *arg)
 {

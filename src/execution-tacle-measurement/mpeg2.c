@@ -101,15 +101,15 @@ int mpeg2_variance( unsigned char *, int );
   Declaration of global variables
 */
 
-volatile int mpeg2_width = 1;
-volatile int mpeg2_height = 256;
-volatile int mpeg2_width2 = 352;
-volatile int mpeg2_height2 = 256;
-volatile int mpeg2_M = 3;
-volatile int mpeg2_pict_type = 3;
-volatile int mpeg2_pict_struct = 3;
-volatile int mpeg2_topfirst = 1;
-volatile int mpeg2_frame_pred_dct = 0;
+#define mpeg2_width 1
+#define mpeg2_height 256
+#define mpeg2_width2 352
+#define mpeg2_height2 256
+#define mpeg2_M 3
+#define mpeg2_pict_type 3
+#define mpeg2_pict_struct 3
+#define mpeg2_topfirst 1
+#define mpeg2_frame_pred_dct 0
 
 struct mbinfo mpeg2_mbinfo[ 1 ];
 
@@ -11381,25 +11381,6 @@ unsigned char mpeg2_oldorgframe[] = {
 
 
 /*
-  Initialization- and return-value-related functions
-*/
-
-void mpeg2_init( void )
-{
-  unsigned int i;
-  unsigned char *p;
-  volatile char bitmask = 0;
-
-  /*
-    Apply volatile XOR-bitmask to entire input array.
-  */
-  p = ( unsigned char * ) &mpeg2_oldorgframe[ 0 ];
-  _Pragma( "loopbound min 90112 max 90112" )
-  for ( i = 0; i < sizeof( mpeg2_oldorgframe ); ++i, ++p )
-    *p ^= bitmask;
-}
-
-/*
   Algorithm core functions
 */
 
@@ -13168,12 +13149,3 @@ void mpeg2_main( void )
     mpeg2_oldorgframe, mpeg2_oldorgframe, mpeg2_oldorgframe, mpeg2_oldorgframe,
     mpeg2_oldorgframe, mpeg2_oldorgframe, 7, 7, 3, 3, mpeg2_mbinfo, 0, 0 );
 }
-
-
-// int main( void )
-// {
-//   mpeg2_init();
-//   mpeg2_main();
-
-//   return ( mpeg2_return() - ( -116 ) != 0 );
-// }

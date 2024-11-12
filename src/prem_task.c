@@ -178,7 +178,7 @@ void vPREMTask(void *pvParameters)
     {
         uint64_t end_time = generic_timer_read_counter();
         uint64_t release_time = get_last_period_start(prv_premtask_parameters->task_id);
-        uint64_t response_time = end_time - release_time;
+        uint64_t response_time = pdSYSTICK_TO_NS(sysfreq, end_time - release_time);
         hypercall(HC_DISPLAY_RESULTS, prv_premtask_parameters->task_id, response_time, 0);
     }
 
