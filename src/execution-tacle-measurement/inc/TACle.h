@@ -18,16 +18,16 @@ unsigned char *get_countnegative_array(void);
 void countnegative_init(void);
 void countnegative_main(void);
 
-// Binarysearch
+// Bubblesort
 // Data
 /*
   The dimension of the matrix
 */
-#define BN_MAXSIZE 25600 // 25600 * 2 int = 51200 * 4 B = 4 * 50kB = 200kB
+#define BS_MAXSIZE 204800 // 200kB
 
 // Functions
-unsigned char *get_binarysearch_array(void);
-void binarysearch_init(void);
-void binarysearch_main(void);
+unsigned char *get_bubblesort_array(void);
+void bubblesort_init(void);
+void bubblesort_main(void);
 
 #endif

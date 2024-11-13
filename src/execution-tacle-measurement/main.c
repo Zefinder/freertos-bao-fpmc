@@ -24,7 +24,7 @@
 
 uint64_t ntest_mpeg = 0;
 uint64_t ntest_countnegative = 0;
-uint64_t ntest_binarysearch = 0;
+uint64_t ntest_bubblesort = 0;
 uint64_t ntest_weightavg = 0;
 
 void mpeg2_task(void *pvParameters)
@@ -51,13 +51,13 @@ void countnegative_task(void *pvParameters)
     }
 }
 
-void binarysearch_task(void *pvParameters)
+void bubblesort_task(void *pvParameters)
 {
     // Execute function
-    binarysearch_main();
+    bubblesort_main();
 
     // When executed everything, delete itself
-    if (++ntest_binarysearch == NUMBER_OF_TESTS)
+    if (++ntest_bubblesort == NUMBER_OF_TESTS)
     {
         vTaskPeriodicDelete();
     }
@@ -102,15 +102,15 @@ void main_app(void)
 
     // Init countnegative matrix and binarysearch array
     countnegative_init();
-    binarysearch_init();
+    bubblesort_init();
 
     uint8_t *mpeg_data = get_mpeg2_oldorgframe();
     uint8_t *countnegative_data = get_countnegative_array();
-    uint8_t *binarysearch_data = get_binarysearch_array();
+    uint8_t *binarysearch_data = get_bubblesort_array();
 
     struct premtask_parameters mpeg_struct = {.tickPeriod = 0, .data_size = 90112, .data = mpeg_data, .wcet = 0, .pvParameters = NULL};
     struct premtask_parameters countnegative_struct = {.tickPeriod = 0, .data_size = 147456, .data = countnegative_data, .wcet = 0, .pvParameters = NULL};
-    struct premtask_parameters binarysearch_struct = {.tickPeriod = 0, .data_size = 204800, .data = binarysearch_data, .wcet = 0, .pvParameters = NULL};
+    struct premtask_parameters bubblesort_struct = {.tickPeriod = 0, .data_size = 204800, .data = binarysearch_data, .wcet = 0, .pvParameters = NULL};
     struct premtask_parameters weigthavg_struct = {.tickPeriod = 0, .data_size = 204800, .data = appdata, .wcet = 0, .pvParameters = NULL};
 
     xTaskPREMCreate(
@@ -130,10 +130,10 @@ void main_app(void)
         NULL);
 
     xTaskPREMCreate(
-        binarysearch_task,
-        "Binary search",
+        bubblesort_task,
+        "Bubble sort",
         configMINIMAL_STACK_SIZE,
-        binarysearch_struct,
+        bubblesort_struct,
         3,
         NULL);
 
