@@ -19,7 +19,7 @@ long int bubblesort_sort(void);
 /*
     Globals
 */
-unsigned char bubblesort_array[BS_MAXSIZE];
+unsigned long long int bubblesort_array[BS_MAXSIZE];
 volatile int bubblesort_seed;
 
 /*
@@ -45,12 +45,15 @@ long bubblesort_randomInteger(void)
 */
 long int bubblesort_sort(void)
 {
+    // Writes the result so not possible to avoid executing
+    volatile long int result = 0;
     register long int possible_swap = 0;
 
     for (int i = 0; i < BS_MAXSIZE - 1; i++)
     {
         for (int j = 0; j < BS_MAXSIZE; j++)
         {
+            // printf("%d\n", bubblesort_array[j] );
             // If a bigger number exists, then add one
             if (bubblesort_array[j] > bubblesort_array[i])
             {
@@ -59,7 +62,8 @@ long int bubblesort_sort(void)
         }
     }
 
-    return possible_swap;
+    result = possible_swap;
+    return result;
 }
 
 /*

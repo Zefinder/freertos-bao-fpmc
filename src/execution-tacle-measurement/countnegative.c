@@ -24,7 +24,7 @@
 /*
   Type definition for the matrix
 */
-typedef int matrix [ CN_MAXSIZE ][ CN_MAXSIZE ];
+typedef short int matrix [ CN_MAXSIZE ][ CN_MAXSIZE ];
 
 /*
   Forward declaration of functions
@@ -86,6 +86,8 @@ int countnegative_sum( matrix Array )
   register int Pcnt = 0;
   register int Ncnt = 0;
 
+  volatile int result = 0;
+
   _Pragma( "loopbound min 20 max 20" )
   for ( Outer = 0; Outer < CN_MAXSIZE; Outer++ )
     _Pragma( "loopbound min 20 max 20" )
@@ -98,7 +100,8 @@ int countnegative_sum( matrix Array )
         Ncnt++;
       }
 
-  return Ptotal + Pcnt + Ntotal + Ncnt;
+  result = Ptotal + Pcnt + Ntotal + Ncnt; 
+  return result;
 }
 
 unsigned char *get_countnegative_array(void) 
@@ -113,11 +116,3 @@ void countnegative_main ( void )
 {
   countnegative_sum(  countnegative_array );
 }
-
-// int main( void )
-// {
-//   countnegative_init();
-//   countnegative_main();
-
-//   return ( countnegative_return() );
-// }

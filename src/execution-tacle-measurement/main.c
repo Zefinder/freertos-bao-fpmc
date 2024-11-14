@@ -20,7 +20,7 @@
 
 // To use with only one CPU!
 
-#define NUMBER_OF_TESTS 100001 // Skip the first one, its release time is not relevant in that case
+#define NUMBER_OF_TESTS 10001 // Skip the first one, its release time is not relevant in that case
 
 uint64_t ntest_mpeg = 0;
 uint64_t ntest_countnegative = 0;
@@ -71,17 +71,14 @@ void weightavg_task(void *pvParameters)
     uint32_t offset_1 = 0;
     uint32_t offset_2 = 102400;
 
-    uint64_t array_sum = 0;
-    uint64_t array_avg = 0;
+    volatile uint64_t array_sum = 0;
+    volatile uint64_t array_avg = 0;
     for (int index = 0; index < 102400; index++)
     {
         array_sum += (appdata[index + offset_1] - appdata[index + offset_2]) / 2;
     }
 
     array_avg = array_sum / 102400;
-
-    // This line is here to ensure that array_avg is computed
-    array_sum += array_avg;
 
     // When executed everything, delete itself
     if (++ntest_weightavg >= NUMBER_OF_TESTS)
@@ -110,7 +107,7 @@ void main_app(void)
 
     struct premtask_parameters mpeg_struct = {.tickPeriod = 0, .data_size = 90112, .data = mpeg_data, .wcet = 0, .pvParameters = NULL};
     struct premtask_parameters countnegative_struct = {.tickPeriod = 0, .data_size = 147456, .data = countnegative_data, .wcet = 0, .pvParameters = NULL};
-    struct premtask_parameters bubblesort_struct = {.tickPeriod = 0, .data_size = 204800, .data = binarysearch_data, .wcet = 0, .pvParameters = NULL};
+    struct premtask_parameters bubblesort_struct = {.tickPeriod = 0, .data_size = BS_MAXSIZE, .data = binarysearch_data, .wcet = 0, .pvParameters = NULL};
     struct premtask_parameters weigthavg_struct = {.tickPeriod = 0, .data_size = 204800, .data = appdata, .wcet = 0, .pvParameters = NULL};
 
     xTaskPREMCreate(

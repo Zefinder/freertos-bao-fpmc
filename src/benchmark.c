@@ -157,15 +157,15 @@ void print_benchmark_results()
 
     if (nanotime)
     {
-        printf("min%s_ns = %ld # ns\n", bench_name, get_minimum_time());
-        printf("max%s_ns = %ld # ns\n", bench_name, get_maximum_time());
-        printf("int_average%s_ns = %ld # ns\n", bench_name, get_average_time());
+        printf("min%s_ns = %llu # ns\n", bench_name, get_minimum_time());
+        printf("max%s_ns = %llu # ns\n", bench_name, get_maximum_time());
+        printf("int_average%s_ns = %llu # ns\n", bench_name, get_average_time());
     }
     else
     {
-        printf("min%s = %ld # us\n", bench_name, get_minimum_time());
-        printf("max%s = %ld # us\n", bench_name, get_maximum_time());
-        printf("int_average%s = %ld # us\n", bench_name, get_average_time());
+        printf("min%s = %llu # us\n", bench_name, get_minimum_time());
+        printf("max%s = %llu # us\n", bench_name, get_maximum_time());
+        printf("int_average%s = %llu # us\n", bench_name, get_average_time());
     }
 }
 

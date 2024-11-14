@@ -11,7 +11,7 @@ void mpeg2_main(void);
 /*
   The dimension of the matrix
 */
-#define CN_MAXSIZE 96 // 96 int = 384B, 384 x 384 = 147456B = 144kB
+#define CN_MAXSIZE 192 // 192 shorts = 384B, 384 x 384 = 147456B = 144kB
 
 // Functions
 unsigned char *get_countnegative_array(void);
@@ -23,7 +23,7 @@ void countnegative_main(void);
 /*
   The dimension of the matrix
 */
-#define BS_MAXSIZE 204800 // 200kB
+#define BS_MAXSIZE 10240 // 10kB * 8 (uint64) = 80kB
 
 // Functions
 unsigned char *get_bubblesort_array(void);
