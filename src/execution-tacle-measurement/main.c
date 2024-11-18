@@ -18,9 +18,9 @@
 #include <benchmark.h>
 #include "inc/TACle.h"
 
-// To use with only one CPU!
+// To use with 1 processor for WCET measure, 4 processors for taskset measurement
 
-#define NUMBER_OF_TESTS 10001 // Skip the first one, its release time is not relevant in that case
+#define NUMBER_OF_TESTS 10
 
 uint64_t ntest_mpeg = 0;
 uint64_t ntest_countnegative = 0;
@@ -91,9 +91,10 @@ void main_app(void)
 {
 
     /* Two tasks from TACleBench:
-     * - MPEG2
-     * - Count negative
-     * One custom task:
+     * - MPEG2, 88kB
+     * - Count negative, 144kB
+     * Two custom tasks:
+     * - Bubble sort (counting greater numbers), 8kB
      * - Weighted average of 2 100kB arrays
      */
 
@@ -105,17 +106,17 @@ void main_app(void)
     uint8_t *countnegative_data = get_countnegative_array();
     uint8_t *binarysearch_data = get_bubblesort_array();
 
-    struct premtask_parameters mpeg_struct = {.tickPeriod = 0, .data_size = 90112, .data = mpeg_data, .wcet = 0, .pvParameters = NULL};
-    struct premtask_parameters countnegative_struct = {.tickPeriod = 0, .data_size = 147456, .data = countnegative_data, .wcet = 0, .pvParameters = NULL};
-    struct premtask_parameters bubblesort_struct = {.tickPeriod = 0, .data_size = BS_MAXSIZE, .data = binarysearch_data, .wcet = 0, .pvParameters = NULL};
-    struct premtask_parameters weigthavg_struct = {.tickPeriod = 0, .data_size = 204800, .data = appdata, .wcet = 0, .pvParameters = NULL};
+    struct premtask_parameters mpeg_struct = {.tickPeriod = 15, .data_size = 90112, .data = mpeg_data, .wcet = 0, .pvParameters = NULL};
+    struct premtask_parameters countnegative_struct = {.tickPeriod = 21, .data_size = 147456, .data = countnegative_data, .wcet = 0, .pvParameters = NULL};
+    struct premtask_parameters bubblesort_struct = {.tickPeriod = 26, .data_size = BS_MAXSIZE * 8, .data = binarysearch_data, .wcet = 0, .pvParameters = NULL};
+    struct premtask_parameters weigthavg_struct = {.tickPeriod = 27, .data_size = 204800, .data = appdata, .wcet = 0, .pvParameters = NULL};
 
     xTaskPREMCreate(
         mpeg2_task,
         "MPEG2",
         configMINIMAL_STACK_SIZE,
         mpeg_struct,
-        1,
+        3,
         NULL);
 
     xTaskPREMCreate(
@@ -123,7 +124,7 @@ void main_app(void)
         "Count negative",
         configMINIMAL_STACK_SIZE,
         countnegative_struct,
-        2,
+        4,
         NULL);
 
     xTaskPREMCreate(
@@ -131,7 +132,7 @@ void main_app(void)
         "Bubble sort",
         configMINIMAL_STACK_SIZE,
         bubblesort_struct,
-        3,
+        1,
         NULL);
 
     xTaskPREMCreate(
@@ -139,7 +140,7 @@ void main_app(void)
         "Weight average",
         configMINIMAL_STACK_SIZE,
         weigthavg_struct,
-        4,
+        2,
         NULL);
 
     vInitPREM();

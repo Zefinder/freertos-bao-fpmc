@@ -24,7 +24,7 @@
 /*
   Type definition for the matrix
 */
-typedef short int matrix [ CN_MAXSIZE ][ CN_MAXSIZE ];
+typedef char matrix [ CN_MAXSIZE ][ CN_MAXSIZE ];
 
 /*
   Forward declaration of functions

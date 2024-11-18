@@ -42,6 +42,9 @@ void suspend_task()
     // Wait for interrupt so we don't look at the memory for nothing
     while (!memory_access.raw)
         __asm__ volatile("wfi");
+        
+        // Woken up by either tick interrupt or IPI resume, ask for rescheduling
+        vTaskDelay(0);
 
     suspend_prefetch = 0;
 }

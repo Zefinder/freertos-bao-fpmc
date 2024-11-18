@@ -82,7 +82,7 @@ void bubblesort_init(void)
 
 unsigned char *get_bubblesort_array(void)
 {
-    return bubblesort_array;
+    return (unsigned char *)bubblesort_array;
 }
 
 void bubblesort_main(void)
