@@ -16,7 +16,7 @@ uint64_t starting_tick = 0;
 uint64_t *last_period_start; // Array containing all last periods
 uint64_t sysfreq = 0;
 
-uint8_t kill_current_task = 0; // 1 if needs to be killed
+uint8_t kill_periodic_task = 0; // 1 if needs to be killed
 
 /* The periodic task */
 void vPeriodicTask(void *pvParameters)
@@ -48,9 +48,9 @@ void vPeriodicTask(void *pvParameters)
         pxTaskCode(pvTaskParameters);
 
         // If delete function called during code execution... 
-        if (kill_current_task) {
+        if (kill_periodic_task) {
             // Reset kill and delete
-            kill_current_task = 0;
+            kill_periodic_task = 0;
             vTaskDelete(NULL);
         }
 
@@ -139,7 +139,7 @@ TickType_t get_last_period_start(uint8_t task_id)
 }
 
 void vTaskPeriodicDelete() {
-    kill_current_task = 1;
+    kill_periodic_task = 1;
 }
 
 void vInitPeriodic(void)

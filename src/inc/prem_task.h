@@ -101,6 +101,19 @@ BaseType_t xTaskPREMCreate(TaskFunction_t pxTaskCode,
                            TaskHandle_t *const pxCreatedTask);
 
 /*
+ * Deletes the PREM task. If time is measured, it will send one hypercall with 4 values:
+ * - The core id
+ * - The task id
+ * - The max response time
+ * - The sum of all response times (for average)
+ * 
+ * This will call the vTaskPeriodicDelete function.
+ */
+void vTaskPREMDelete(void);    
+
+void askDisplayResults(void);
+
+/*
  * Init PREM with this function. This is mandatory to do it if you used the DEFAULT_IPI
  * option. In that case you will need to run it once before starting PREM tasks. This
  * function will enable IPI and implement handlers for you! Running this function more

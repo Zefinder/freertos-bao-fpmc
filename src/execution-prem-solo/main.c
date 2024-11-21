@@ -41,7 +41,7 @@ volatile uint8_t suspend_prefetch = 0;
 void prefetch(void *arg)
 {
     // Memory phase
-    union memory_request_answer answer = {.raw = request_memory_access(0)};
+    union memory_request_answer answer = {.raw = request_memory_access(0, 0)};
 
     // If no ack, then suspend prefetch
     suspend_prefetch = !answer.ack;
@@ -64,7 +64,7 @@ void vMasterTask(void *pvParameters)
         int data_size_ko = BtkB(data_size);
         char test_name[20];
         sprintf(test_name, "_%dkB", data_size_ko);
-        init_benchmark(test_name, MEASURE_NANO);
+        init_benchmark(test_name, MEASURE_NANO, 1);
 
         while (counter++ < NUMBER_OF_TESTS)
         {

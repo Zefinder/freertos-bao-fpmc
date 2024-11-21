@@ -64,37 +64,37 @@ struct mbinfo {
   Forward declaration of functions
 */
 
-void mpeg2_motion_estimation( unsigned char *, unsigned char *, unsigned char *,
-                              unsigned char *, unsigned char *, unsigned char *,
+void mpeg2_motion_estimation( unsigned int *, unsigned int *, unsigned int *,
+                              unsigned int *, unsigned int *, unsigned int *,
                               int, int, int, int, struct mbinfo *, int, int );
-void mpeg2_frame_ME( unsigned char *, unsigned char *, unsigned char *,
-                     unsigned char *, unsigned char *, int, int, int, int, int,
+void mpeg2_frame_ME( unsigned int *, unsigned int *, unsigned int *,
+                     unsigned int *, unsigned int *, int, int, int, int, int,
                      int, struct mbinfo * );
-void mpeg2_field_ME( unsigned char *, unsigned char *, unsigned char *,
-                     unsigned char *, unsigned char *, unsigned char *, int,
+void mpeg2_field_ME( unsigned int *, unsigned int *, unsigned int *,
+                     unsigned int *, unsigned int *, unsigned int *, int,
                      int, int, int, int, int, struct mbinfo *, int, int );
-void mpeg2_frame_estimate( unsigned char *, unsigned char *, unsigned char *,
+void mpeg2_frame_estimate( unsigned int *, unsigned int *, unsigned int *,
                            int, int, int, int, int *, int *, int *, int *,
                            int *, int *, int *, int *, int *, int *,
                            int[ 2 ][ 2 ], int[ 2 ][ 2 ] );
-void mpeg2_field_estimate( unsigned char *, unsigned char *, unsigned char *,
-                           unsigned char *, unsigned char *, int, int, int, int,
+void mpeg2_field_estimate( unsigned int *, unsigned int *, unsigned int *,
+                           unsigned int *, unsigned int *, int, int, int, int,
                            int, int *, int *, int *, int *, int *, int *, int *,
                            int *, int *, int *, int *, int *, int *, int * );
-void mpeg2_dpframe_estimate( unsigned char *, unsigned char *, int, int,
+void mpeg2_dpframe_estimate( unsigned int *, unsigned int *, int, int,
                              int[ 2 ][ 2 ], int[ 2 ][ 2 ], int *, int *, int *,
                              int *, int *, int * );
-void mpeg2_dpfield_estimate( unsigned char *, unsigned char *, unsigned char *,
+void mpeg2_dpfield_estimate( unsigned int *, unsigned int *, unsigned int *,
                              int, int, int, int, int *, int *, int *, int * );
-int mpeg2_fullsearch( unsigned char *, unsigned char *, unsigned char *, int,
+int mpeg2_fullsearch( unsigned int *, unsigned int *, unsigned int *, int,
                       int, int, int, int, int, int, int, int *, int * );
-int mpeg2_dist1( unsigned char *, unsigned char *, int, int, int, int, int );
-int mpeg2_dist2( unsigned char *, unsigned char *, int, int, int, int );
-int mpeg2_bdist1( unsigned char *, unsigned char *, unsigned char *, int, int,
+int mpeg2_dist1( unsigned int *, unsigned int *, int, int, int, int, int );
+int mpeg2_dist2( unsigned int *, unsigned int *, int, int, int, int );
+int mpeg2_bdist1( unsigned int *, unsigned int *, unsigned int *, int, int,
                   int, int, int, int );
-int mpeg2_bdist2( unsigned char *, unsigned char *, unsigned char *, int, int,
+int mpeg2_bdist2( unsigned int *, unsigned int *, unsigned int *, int, int,
                   int, int, int, int );
-int mpeg2_variance( unsigned char *, int );
+int mpeg2_variance( unsigned int *, int );
 
 
 /*
@@ -113,7 +113,7 @@ int mpeg2_variance( unsigned char *, int );
 
 struct mbinfo mpeg2_mbinfo[ 1 ];
 
-unsigned char mpeg2_oldorgframe[] = {
+unsigned int mpeg2_oldorgframe[] = {
     0x9f, 0x9d, 0x9b, 0x9d, 0x9f, 0xa1, 0xa2, 0xa3,
     0x9e, 0xa2, 0xa5, 0xa5, 0xa2, 0xa1, 0xa4, 0xa7,
     0xa3, 0xa3, 0xa5, 0xa6, 0xa5, 0xa5, 0xa3, 0xa2,
@@ -11405,9 +11405,9 @@ unsigned char mpeg2_oldorgframe[] = {
 
   uses global vars: mpeg2_pict_type, frame_pred_dct
 */
-void mpeg2_motion_estimation( unsigned char *oldorg, unsigned char *neworg,
-                              unsigned char *oldref, unsigned char *newref,
-                              unsigned char *cur, unsigned char *curref,
+void mpeg2_motion_estimation( unsigned int *oldorg, unsigned int *neworg,
+                              unsigned int *oldref, unsigned int *newref,
+                              unsigned int *cur, unsigned int *curref,
                               int sxf, int syf, int sxb, int syb,
                               struct mbinfo *mbi, int secondfield, int ipflag )
 {
@@ -11433,9 +11433,9 @@ void mpeg2_motion_estimation( unsigned char *oldorg, unsigned char *neworg,
 }
 
 
-void mpeg2_frame_ME( unsigned char *oldorg, unsigned char *neworg,
-                     unsigned char *oldref, unsigned char *newref,
-                     unsigned char *cur, int i, int j, int sxf, int syf,
+void mpeg2_frame_ME( unsigned int *oldorg, unsigned int *neworg,
+                     unsigned int *oldref, unsigned int *newref,
+                     unsigned int *cur, int i, int j, int sxf, int syf,
                      int sxb, int syb, struct mbinfo *mbi )
 {
   int imin, jmin, iminf, jminf, iminr, jminr;
@@ -11446,7 +11446,7 @@ void mpeg2_frame_ME( unsigned char *oldorg, unsigned char *neworg,
   int dmc, dmcf, dmcr, dmci, vmc, vmcf, vmcr, vmci;
   int dmcfield, dmcfieldf, dmcfieldr, dmcfieldi;
   int tsel, bsel, tself, bself, tselr, bselr;
-  unsigned char *mb;
+  unsigned int *mb;
   int imins[ 2 ][ 2 ], jmins[ 2 ][ 2 ];
   int imindp, jmindp, imindmv, jmindmv, dmc_dp, vmc_dp;
 
@@ -11822,14 +11822,14 @@ void mpeg2_frame_ME( unsigned char *oldorg, unsigned char *neworg,
 
   uses global vars: mpeg2_pict_type, mpeg2_pict_struct
 */
-void mpeg2_field_ME( unsigned char *oldorg, unsigned char *neworg,
-                     unsigned char *oldref, unsigned char *newref,
-                     unsigned char *cur, unsigned char  *curref, int i, int j,
+void mpeg2_field_ME( unsigned int *oldorg, unsigned int *neworg,
+                     unsigned int *oldref, unsigned int *newref,
+                     unsigned int *cur, unsigned int  *curref, int i, int j,
                      int sxf, int syf, int sxb, int syb, struct mbinfo *mbi,
                      int secondfield, int ipflag )
 {
   int w2;
-  unsigned char *mb, *toporg, *topref, *botorg, *botref;
+  unsigned int *mb, *toporg, *topref, *botorg, *botref;
   int var, vmc, v0, dmcfieldi, dmc8i;
   int imin, jmin, imin8u, jmin8u, imin8l, jmin8l, dmcfield, dmc8, sel, sel8u,
       sel8l;
@@ -12158,8 +12158,8 @@ void mpeg2_field_ME( unsigned char *oldorg, unsigned char *neworg,
   iminbp,jminbp,bselp: location of best field pred. for bottom field of mb
   dfieldp: value of field prediction
 */
-void mpeg2_frame_estimate( unsigned char *org, unsigned char *ref,
-                           unsigned char *mb, int i, int j, int sx, int sy,
+void mpeg2_frame_estimate( unsigned int *org, unsigned int *ref,
+                           unsigned int *mb, int i, int j, int sx, int sy,
                            int *iminp, int *jminp, int *imintp, int *jmintp,
                            int *iminbp, int *jminbp, int *dframep, int *dfieldp,
                            int *tselp, int *bselp, int imins[ 2 ][ 2 ],
@@ -12258,9 +12258,9 @@ void mpeg2_frame_estimate( unsigned char *org, unsigned char *ref,
                      prediction (needed for dual prime, only valid if
                      ipflag==0)
 */
-void mpeg2_field_estimate( unsigned char *toporg, unsigned char *topref,
-                           unsigned char *botorg, unsigned char *botref,
-                           unsigned char *mb, int i, int j, int sx, int sy,
+void mpeg2_field_estimate( unsigned int *toporg, unsigned int *topref,
+                           unsigned int *botorg, unsigned int *botref,
+                           unsigned int *mb, int i, int j, int sx, int sy,
                            int ipflag, int *iminp, int *jminp, int *imin8up,
                            int *jmin8up, int *imin8lp, int *jmin8lp,
                            int *dfieldp, int *d8p, int *selp, int *sel8up,
@@ -12384,7 +12384,7 @@ void mpeg2_field_estimate( unsigned char *toporg, unsigned char *topref,
 }
 
 
-void mpeg2_dpframe_estimate( unsigned char *ref, unsigned char *mb, int i,
+void mpeg2_dpframe_estimate( unsigned int *ref, unsigned int *mb, int i,
                              int j, int iminf[ 2 ][ 2 ], int jminf[ 2 ][ 2 ],
                              int *iminp, int *jminp, int *imindmvp,
                              int *jmindmvp, int *dmcp, int *vmcp )
@@ -12541,12 +12541,12 @@ void mpeg2_dpframe_estimate( unsigned char *ref, unsigned char *mb, int i,
 }
 
 
-void mpeg2_dpfield_estimate( unsigned char *topref, unsigned char *botref,
-                             unsigned char *mb, int i, int j, int imins,
+void mpeg2_dpfield_estimate( unsigned int *topref, unsigned int *botref,
+                             unsigned int *mb, int i, int j, int imins,
                              int jmins, int *imindmvp, int *jmindmvp, int *dmcp,
                              int *vmcp )
 {
-  unsigned char *sameref, *oppref;
+  unsigned int *sameref, *oppref;
   int io0, jo0, io, jo, delta_x, delta_y, mvxs, mvys, mvxo0, mvyo0;
   int imino = 0, jmino = 0, imindmv = 0, jmindmv = 0, vmc_dp = 0, local_dist = 0;
 
@@ -12651,8 +12651,8 @@ void mpeg2_dpfield_estimate( unsigned char *topref, unsigned char *botref,
                result is given as half pel offset from ref(0,0)
                i.e. NOT relative to (i0,j0)
 */
-int mpeg2_fullsearch( unsigned char *org, unsigned char *ref,
-                      unsigned char *blk, int lx, int i0, int j0, int sx,
+int mpeg2_fullsearch( unsigned int *org, unsigned int *ref,
+                      unsigned int *blk, int lx, int i0, int j0, int sx,
                       int sy, int h, int xmax, int ymax, int *iminp,
                       int *jminp )
 {
@@ -12761,10 +12761,10 @@ int mpeg2_fullsearch( unsigned char *org, unsigned char *ref,
   h:         height of block (usually 8 or 16)
   distlim:   bail out if sum exceeds this value
 */
-int mpeg2_dist1( unsigned char *blk1, unsigned char *blk2, int lx, int hx,
+int mpeg2_dist1( unsigned int *blk1, unsigned int *blk2, int lx, int hx,
                  int hy, int h, int distlim )
 {
-  unsigned char *p1, *p1a, *p2;
+  unsigned int *p1, *p1a, *p2;
   int i, j;
   int s, v;
 
@@ -12916,10 +12916,10 @@ int mpeg2_dist1( unsigned char *blk1, unsigned char *blk2, int lx, int hx,
   hx,hy:     flags for horizontal and/or vertical interpolation
   h:         height of block (usually 8 or 16)
 */
-int mpeg2_dist2( unsigned char *blk1, unsigned char *blk2, int lx, int hx,
+int mpeg2_dist2( unsigned int *blk1, unsigned int *blk2, int lx, int hx,
                  int hy, int h )
 {
-  unsigned char *p1, *p1a, *p2;
+  unsigned int *p1, *p1a, *p2;
   int i, j;
   int s, v;
 
@@ -13003,10 +13003,10 @@ int mpeg2_dist2( unsigned char *blk1, unsigned char *blk2, int lx, int hx,
   h: height of block
   lx: distance (in bytes) of vertically adjacent pels in p2,pf,pb
 */
-int mpeg2_bdist1( unsigned char *pf, unsigned char *pb, unsigned char *p2,
+int mpeg2_bdist1( unsigned int *pf, unsigned int *pb, unsigned int *p2,
                   int lx, int hxf, int hyf, int hxb, int hyb, int h )
 {
-  unsigned char *pfa, *pfb, *pfc, *pba, *pbb, *pbc;
+  unsigned int *pfa, *pfb, *pfc, *pba, *pbb, *pbc;
   int i, j;
   int s, v;
 
@@ -13061,10 +13061,10 @@ int mpeg2_bdist1( unsigned char *pf, unsigned char *pb, unsigned char *p2,
   h: height of block
   lx: distance (in bytes) of vertically adjacent pels in p2,pf,pb
 */
-int mpeg2_bdist2( unsigned char *pf, unsigned char *pb, unsigned char *p2,
+int mpeg2_bdist2( unsigned int *pf, unsigned int *pb, unsigned int *p2,
                   int lx, int hxf, int hyf, int hxb, int hyb, int h )
 {
-  unsigned char *pfa, *pfb, *pfc, *pba, *pbb, *pbc;
+  unsigned int *pfa, *pfb, *pfc, *pba, *pbb, *pbc;
   int i, j;
   int s, v;
 
@@ -13111,7 +13111,7 @@ int mpeg2_bdist2( unsigned char *pf, unsigned char *pb, unsigned char *p2,
   p:  address of top left pel of block
   lx: distance (in bytes) of vertically adjacent pels
 */
-int mpeg2_variance( unsigned char *p, int lx )
+int mpeg2_variance( unsigned int *p, int lx )
 {
   int i, j;
   unsigned int v, s, s2;
@@ -13136,14 +13136,14 @@ int mpeg2_variance( unsigned char *p, int lx )
 
 unsigned char *get_mpeg2_oldorgframe()
 {
-  return mpeg2_oldorgframe;
+  return (unsigned char *)mpeg2_oldorgframe;
 }
 
 /*
   Main functions
 */
 
-void mpeg2_main( void )
+void mpeg2_main( void *arg )
 {
   mpeg2_motion_estimation(
     mpeg2_oldorgframe, mpeg2_oldorgframe, mpeg2_oldorgframe, mpeg2_oldorgframe,

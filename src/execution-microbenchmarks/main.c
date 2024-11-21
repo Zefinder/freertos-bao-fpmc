@@ -65,7 +65,7 @@ void vHypercallTask(void *pvParameters)
     int counter = 0;
     int print_counter = 0;
 
-    init_benchmark("_hypercall", MEASURE_NANO);
+    init_benchmark("_hypercall", MEASURE_NANO, 1);
     while (counter < NUMBER_OF_TESTS)
     {
         // Benchmark prefetching
@@ -253,7 +253,7 @@ void vArbitrationRevokeTask(void *pvParameters)
             counter += 1;
 
             // Ask memory access, don't care of access since we will never have priority on interferences
-            answer = request_memory_access(prio);
+            answer = request_memory_access(prio, 0);
 
             // Wait for a bit to release stress (100µs)
             wait_for(pdUS_TO_SYSTICK(base_frequency, 100));

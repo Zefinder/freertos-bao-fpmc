@@ -13,7 +13,7 @@
 
 #define NUMBER_OF_TESTS 100000
 #define DATA_SIZE MAX_DATA_SIZE
-#define MIN_DATA_SIZE 1 kB
+#define MIN_DATA_SIZE MAX_DATA_SIZE
 #define DATA_SIZE_INCREMENT 1 kB
 
 int counter = 0;
@@ -37,7 +37,7 @@ void vMasterTask(void *pvParameters)
         int data_size_ko = BtkB(data_size);
         char test_name[20];
         sprintf(test_name, "_%dkB", data_size_ko);
-        init_benchmark(test_name, MEASURE_NANO);
+        init_benchmark(test_name, MEASURE_NANO, 1);
 
         while (counter++ < NUMBER_OF_TESTS)
         {

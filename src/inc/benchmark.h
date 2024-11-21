@@ -55,7 +55,7 @@ void run_benchmark(benchmark_t benchmark_code, void *benchmark_argument);
  * If benchmark_name is NULL, then it will be replaced by the empty
  * string
  */
-void init_benchmark(char *benchmark_name, int use_nano);
+void init_benchmark(char *benchmark_name, int use_nano, int display_intermediate);
 
 /* 
  * Returns the last measured time, or 0 if no time measured

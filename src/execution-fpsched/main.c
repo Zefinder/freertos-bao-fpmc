@@ -35,7 +35,7 @@ void vTaskHypercall(void *pvParameters)
     if (counter < NUMBER_OF_TESTS)
     {
         // Asking for memory access
-        int ack_access = request_memory_access(CPU_PRIO);
+        int ack_access = request_memory_access(CPU_PRIO, 0);
 
         // If access not granted then we suspend task
         if (!ack_access)
@@ -129,7 +129,7 @@ void main_app(void)
     int frequency = 300;
     printf("Begin fpsched prefetch tests...\n");
     start_benchmark();
-    init_benchmark(NULL, 0);
+    init_benchmark(NULL, 0, 1);
 
     struct periodic_arguments periodic_arguments = {.tickPeriod = pdFREQ_TO_TICKS(frequency), .pvParameters = NULL};
     xTaskPeriodicCreate(

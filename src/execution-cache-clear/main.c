@@ -56,7 +56,7 @@ void vMasterTask(void *pvParameters)
         int data_size_ko = BtkB(data_size);
         char test_name[20];
         sprintf(test_name, "_%dkB", data_size_ko);
-        init_benchmark(test_name, MEASURE_NANO);
+        init_benchmark(test_name, MEASURE_NANO, 1);
 
         while (counter++ < NUMBER_OF_TESTS)
         {

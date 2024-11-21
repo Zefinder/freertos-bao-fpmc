@@ -75,7 +75,7 @@ void vBenchCreationTask(void *pvParameters)
         printf("# Start benchmark: frequency=%dHz,data size=%dkB\n", TASK_FREQUENCY, data_size_ko);
         char test_name[10];
         sprintf(test_name, "_%dkB", data_size_ko);
-        init_benchmark(test_name, use_nano);
+        init_benchmark(test_name, use_nano, 1);
 
         TaskHandle_t xBenchmarkTaskHandle;
         counter = 0;

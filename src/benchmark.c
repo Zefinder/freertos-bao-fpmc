@@ -16,6 +16,7 @@ uint64_t last_measured_time = 0;
 // Benchmark config
 char *bench_name;
 int nanotime;
+int display;
 
 int test_counter = 0;
 
@@ -103,10 +104,13 @@ void run_benchmark(benchmark_t benchmark_code, void *benchmark_argument)
         last_measured_time = pdSYSTICK_TO_NS(base_frequency, elapsedTime);
     }
 
-    printf("%ld,", measured_time);
+    if (display)
+    {
+        printf("%ld,", measured_time);
+    }
 }
 
-void init_benchmark(char *benchmark_name, int use_nano)
+void init_benchmark(char *benchmark_name, int use_nano, int display_intermediate)
 {
     // Set benchmark name
     if (benchmark_name == NULL)
@@ -120,6 +124,7 @@ void init_benchmark(char *benchmark_name, int use_nano)
 
     // Set nanotime
     nanotime = use_nano;
+    display = display_intermediate;
 
     // Reset min, max and average
     min = -1;
@@ -136,13 +141,16 @@ void init_benchmark(char *benchmark_name, int use_nano)
     // Get base frequency
     base_frequency = generic_timer_get_freq();
 
-    if (nanotime)
+    if (display)
     {
-        printf("elapsed_time_array%s_ns = [", bench_name);
-    }
-    else
-    {
-        printf("elapsed_time_array%s = [", bench_name);
+        if (nanotime)
+        {
+            printf("elapsed_time_array%s_ns = [", bench_name);
+        }
+        else
+        {
+            printf("elapsed_time_array%s = [", bench_name);
+        }
     }
 }
 
@@ -153,8 +161,11 @@ uint64_t get_last_measured_time()
 
 void print_benchmark_results()
 {
-    printf("]\n"); // End elapsed time array
-
+    if (display)
+    {
+        printf("]\n"); // End elapsed time array
+    }
+    
     if (nanotime)
     {
         printf("min%s_ns = %llu # ns\n", bench_name, get_minimum_time());

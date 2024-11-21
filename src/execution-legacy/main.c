@@ -59,7 +59,7 @@ void main_app(void)
     int frequency = 300;
     printf("Begin legacy prefetch tests...\n");
     start_benchmark();
-    init_benchmark(NULL, 0);
+    init_benchmark(NULL, 0, 1);
 
     struct periodic_arguments periodic_arguments = {.tickPeriod = pdFREQ_TO_TICKS(frequency), .pvParameters = NULL};
 

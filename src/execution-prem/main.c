@@ -69,7 +69,7 @@ void prefetch(void *arg)
     change_state(MEMORY_PHASE);
 
     // Memory phase
-    union memory_request_answer answer = {.raw = request_memory_access(prio)};
+    union memory_request_answer answer = {.raw = request_memory_access(prio, 0)};
 
     // If no ack, then suspend prefetch
     suspend_prefetch = !answer.ack;
@@ -92,7 +92,7 @@ void vMasterTask(void *pvParameters)
         // Init benchmark
         char test_name[20];
         sprintf(test_name, "_%dkB_prio%d_interference%dkB", BtkB(DATA_SIZE_0), prio, BtkB(DATA_SIZE_INTERFERENCE));
-        init_benchmark(test_name, MEASURE_NANO);
+        init_benchmark(test_name, MEASURE_NANO, 1);
 
         while (counter++ < NUMBER_OF_TESTS)
         {

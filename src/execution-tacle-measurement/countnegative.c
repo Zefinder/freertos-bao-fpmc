@@ -112,7 +112,7 @@ unsigned char *get_countnegative_array(void)
 /*
   The main function
 */
-void countnegative_main ( void )
+void countnegative_main ( void *arg )
 {
   countnegative_sum(  countnegative_array );
 }

@@ -30,23 +30,28 @@ extern uint64_t sysfreq;
 uint64_t cpu_priority = 0;
 
 uint8_t task_id = 0;
+uint8_t kill_prem_task = 0;
+uint8_t ask_display_results = 0;
 
 #ifdef MEASURE_RESPONSE_TIME
 uint8_t measure_response_time = 1;
 #else
 uint8_t measure_response_time = 0;
 #endif
+uint64_t *response_max;
+uint64_t *response_sum;
+uint64_t *response_number;
 
 void suspend_task()
 {
     // Wait for interrupt so we don't look at the memory for nothing
-    while (!memory_access.raw)
+    while (suspend_prefetch == 1)
+    {
         __asm__ volatile("wfi");
-        
-        // Woken up by either tick interrupt or IPI resume, ask for rescheduling
-        vTaskDelay(0);
+    }
 
-    suspend_prefetch = 0;
+    // Woken up by either tick interrupt or IPI resume, ask for rescheduling
+    vTaskDelay(0);
 }
 
 #ifdef DEFAULT_IPI_HANDLERS
@@ -96,7 +101,10 @@ void vApplicationTickHook(void)
             if (current_time >= end_low_prio)
             {
                 end_low_prio = 0;
-                update_memory_access(cpu_priority);
+
+                // Time to wait over, just yes or no!
+                union memory_request_answer update = {.raw = update_memory_access(cpu_priority)};
+                suspend_prefetch = ~update.ack;
             }
         }
     }
@@ -110,6 +118,16 @@ void vTaskPREMDelay(TickType_t waitingTicks)
     {
         current_time = generic_timer_read_counter();
     }
+}
+
+void display_results(uint8_t task_id)
+{
+    hypercall(HC_DISPLAY_RESULTS, task_id, response_max[task_id], response_sum[task_id]);
+
+    // Reset values
+    response_max[task_id] = 0;
+    response_sum[task_id] = 0;
+    response_number[task_id] = 0;
 }
 
 void vPREMTask(void *pvParameters)
@@ -177,12 +195,35 @@ void vPREMTask(void *pvParameters)
     }
 
     // Measure response time (Write from hypervisor task priority and response time)
-    if (measure_response_time)
+    // Always skip the first one
+    if (measure_response_time && response_number[prv_premtask_parameters->task_id]++ > 0)
     {
         uint64_t end_time = generic_timer_read_counter();
         uint64_t release_time = get_last_period_start(prv_premtask_parameters->task_id);
         uint64_t response_time = pdSYSTICK_TO_NS(sysfreq, end_time - release_time);
-        hypercall(HC_DISPLAY_RESULTS, prv_premtask_parameters->task_id, response_time, 0);
+
+        if (response_max[prv_premtask_parameters->task_id] < response_time)
+        {
+            response_max[prv_premtask_parameters->task_id] = response_time;
+        }
+        response_sum[prv_premtask_parameters->task_id] += response_time;
+    }
+
+    if (kill_prem_task == 1)
+    {
+        // Notify periodic task to kill this one
+        kill_prem_task = 0;
+        vTaskPeriodicDelete();
+
+        display_results(prv_premtask_parameters->task_id);
+
+        // Free task parameters
+        vPortFree(prv_premtask_parameters);
+    }
+    else if (ask_display_results == 1)
+    {
+        ask_display_results = 0;
+        display_results(prv_premtask_parameters->task_id);
     }
 
     // Wait (resume scheduler)
@@ -197,7 +238,8 @@ BaseType_t xTaskPREMCreate(TaskFunction_t pxTaskCode,
                            UBaseType_t uxPriority,
                            TaskHandle_t *const pxCreatedTask)
 {
-    if (sysfreq == 0) {
+    if (sysfreq == 0)
+    {
         sysfreq = generic_timer_get_freq();
     }
 
@@ -222,12 +264,32 @@ BaseType_t xTaskPREMCreate(TaskFunction_t pxTaskCode,
                         pxCreatedTask);
 }
 
-// TODO vPREMTaskDelete
+void vTaskPREMDelete()
+{
+    kill_prem_task = 1;
+}
+
+void askDisplayResults()
+{
+    ask_display_results = 1;
+}
 
 void vInitPREM()
 {
     // Init periodic tasks
     vInitPeriodic();
+
+#ifdef MEASURE_RESPONSE_TIME
+    // Malloc the measure pointers
+    response_sum = pvPortMalloc(sizeof(uint64_t) * task_id);
+    response_max = pvPortMalloc(sizeof(uint64_t) * task_id);
+    for (int i = 0; i < task_id; i++)
+    {
+        response_max[i] = 0;
+        response_sum[i] = 0;
+        response_number[i] = 0;
+    }
+#endif
 
 // Only set handlers iff they are defined before
 #ifdef DEFAULT_IPI_HANDLERS
