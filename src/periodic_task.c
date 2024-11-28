@@ -14,7 +14,6 @@ struct prv_periodic_arguments
 uint8_t periodic_task_number = 0;
 uint64_t starting_tick = 0;
 uint64_t *last_period_start; // Array containing all last periods
-uint64_t sysfreq = 0;
 
 uint8_t kill_periodic_task = 0; // 1 if needs to be killed
 
@@ -68,7 +67,7 @@ void vPeriodicTask(void *pvParameters)
                 // printf("Ticks to wait: %lld\n\n", pdSYSTICK_TO_TICKS(sysfreq, next_period_start - currentTick));
 
                 // Put the task into WAIT state, so compute the number of FreeRTOS cycles to wait
-                vTaskDelay(pdSYSTICK_TO_TICKS(sysfreq, next_period_start - currentTick));
+                vTaskDelay(pdSYSTICK_TO_TICKS(generic_timer_get_freq(), next_period_start - currentTick));
 
                 // The pdSYSTICK_TO_TICKS gives an underestimation of the number of cycles to wait...
                 // So wait for the remaining number of systicks 
@@ -108,18 +107,11 @@ BaseType_t xTaskPeriodicCreate(TaskFunction_t pxTaskCode,
                                UBaseType_t uxPriority,
                                TaskHandle_t *const pxCreatedTask)
 {
-    if (sysfreq == 0) {
-        sysfreq = generic_timer_get_freq();
-    }
-
     // Create and fill struct
     struct prv_periodic_arguments *periodic_arguments_ptr = (struct prv_periodic_arguments *)pvPortMalloc(sizeof(struct prv_periodic_arguments));
 
     periodic_arguments_ptr->pxTaskCode = pxTaskCode;
-    // printf("Period in ticks: %d\n", periodic_arguments.tickPeriod);
-    // printf("Period in µs: %d\n", pdTICKS_TO_US(periodic_arguments.tickPeriod));
-    // printf("Period in systicks: %lld\n\n", pdTICKS_TO_SYSTICK(sysfreq, periodic_arguments.tickPeriod));
-    periodic_arguments_ptr->systick_period = pdTICKS_TO_SYSTICK(sysfreq, periodic_arguments.tickPeriod);
+    periodic_arguments_ptr->systick_period = pdTICKS_TO_SYSTICK(generic_timer_get_freq(), periodic_arguments.tickPeriod);
     periodic_arguments_ptr->task_id = periodic_task_number++;
     periodic_arguments_ptr->pvParameters = periodic_arguments.pvParameters;
 

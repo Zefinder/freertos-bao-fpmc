@@ -12,8 +12,8 @@
  * - uint64_t data_size: the size of the data to prefetch (in bytes)
  * - void *data: the data array to prefetch. It will internally be considered as
  * a uint8_t array of size [data_size]
- * - uint32_t *priority: the memory access priority of the task. As it might change
- * after the execution of the task, it is a pointer which value can be modified.
+ * - uint64_t wcet: Worst case execution time. Time must be in NANOSECONDS, conversion
+ * to systicks will be done internally.
  * - void *pvParameters: the argument(s) of the task.
  *
  * Note that you do not need to malloc the struct is as it will be malloc'ed

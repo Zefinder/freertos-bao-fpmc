@@ -82,42 +82,59 @@ void master_task(void *pvParameters)
     vTaskDelete(NULL);
 }
 
+void interfering_task(void *pvParameters)
+{
+    // Nothing here, just nothing...
+}
+
 void main_app(void)
 {
-    start_benchmark();
-    /*
-        Tasks mpeg2_task and countnegative_task from TACleBench
-    */
-    // Init countnegative matrix and binarysearch array
-    countnegative_init();
-    bubblesort_init();
+    uint64_t cpu_id = hypercall(HC_GET_CPU_ID, 0, 0, 0);
+    if (cpu_id == 0)
+    {
+        start_benchmark();
+        /*
+            Tasks mpeg2_task and countnegative_task from TACleBench
+        */
+        // Init countnegative matrix and binarysearch array
+        countnegative_init();
+        bubblesort_init();
 
-    uint8_t *mpeg_data = get_mpeg2_oldorgframe();
-    uint8_t *countnegative_data = get_countnegative_array();
-    uint8_t *binarysearch_data = get_bubblesort_array();
+        uint8_t *mpeg_data = get_mpeg2_oldorgframe();
+        uint8_t *countnegative_data = get_countnegative_array();
+        uint8_t *binarysearch_data = get_bubblesort_array();
 
-    struct task_parameters mpeg_struct = {.name = "_mpeg2", .task_function = mpeg2_main, .data = mpeg_data, .data_size = 88 kB * 4};
-    struct task_parameters countnegative_struct = {.name = "_countnegative", .task_function = countnegative_main, .data = countnegative_data, .data_size = CN_MAXSIZE * CN_MAXSIZE};
-    struct task_parameters bubblesort_struct = {.name = "_bubblesort", .task_function = bubblesort_main, .data = binarysearch_data, .data_size = BS_MAXSIZE * 8};
-    struct task_parameters weigthavg_struct = {.name = "_weightavg", .task_function = weightavg_task, .data = appdata, .data_size = 460 kB};
+        struct task_parameters mpeg_struct = {.name = "_mpeg2", .task_function = mpeg2_main, .data = mpeg_data, .data_size = 88 kB * 4};
+        struct task_parameters countnegative_struct = {.name = "_countnegative", .task_function = countnegative_main, .data = countnegative_data, .data_size = CN_MAXSIZE * CN_MAXSIZE};
+        struct task_parameters bubblesort_struct = {.name = "_bubblesort", .task_function = bubblesort_main, .data = binarysearch_data, .data_size = BS_MAXSIZE * 8};
+        struct task_parameters weigthavg_struct = {.name = "_weightavg", .task_function = weightavg_task, .data = appdata, .data_size = 460 kB};
 
-    // Malloc task parameters
-    struct task_parameters *pv_mpeg_struct = (struct task_parameters *)pvPortMalloc(sizeof(struct task_parameters));
-    *pv_mpeg_struct = mpeg_struct;
+        // Malloc task parameters
+        struct task_parameters *pv_mpeg_struct = (struct task_parameters *)pvPortMalloc(sizeof(struct task_parameters));
+        *pv_mpeg_struct = mpeg_struct;
 
-    struct task_parameters *pv_countnegative_struct = (struct task_parameters *)pvPortMalloc(sizeof(struct task_parameters));
-    *pv_countnegative_struct = countnegative_struct;
+        struct task_parameters *pv_countnegative_struct = (struct task_parameters *)pvPortMalloc(sizeof(struct task_parameters));
+        *pv_countnegative_struct = countnegative_struct;
 
-    struct task_parameters *pv_bubblesort_struct = (struct task_parameters *)pvPortMalloc(sizeof(struct task_parameters));
-    *pv_bubblesort_struct = bubblesort_struct;
+        struct task_parameters *pv_bubblesort_struct = (struct task_parameters *)pvPortMalloc(sizeof(struct task_parameters));
+        *pv_bubblesort_struct = bubblesort_struct;
 
-    struct task_parameters *pv_weigthavg_struct = (struct task_parameters *)pvPortMalloc(sizeof(struct task_parameters));
-    *pv_weigthavg_struct = weigthavg_struct;
+        struct task_parameters *pv_weigthavg_struct = (struct task_parameters *)pvPortMalloc(sizeof(struct task_parameters));
+        *pv_weigthavg_struct = weigthavg_struct;
 
-    xTaskCreate(master_task, "MPEG2", configMINIMAL_STACK_SIZE, pv_mpeg_struct, 4, NULL);
-    xTaskCreate(master_task, "Count negative", configMINIMAL_STACK_SIZE, pv_countnegative_struct, 3, NULL);
-    xTaskCreate(master_task, "Bubble sort", configMINIMAL_STACK_SIZE, pv_bubblesort_struct, 2, NULL);
-    xTaskCreate(master_task, "Weight average", configMINIMAL_STACK_SIZE, pv_weigthavg_struct, 1, NULL);
+        xTaskCreate(master_task, "MPEG2", configMINIMAL_STACK_SIZE, pv_mpeg_struct, 4, NULL);
+        xTaskCreate(master_task, "Count negative", configMINIMAL_STACK_SIZE, pv_countnegative_struct, 3, NULL);
+        xTaskCreate(master_task, "Bubble sort", configMINIMAL_STACK_SIZE, pv_bubblesort_struct, 2, NULL);
+        xTaskCreate(master_task, "Weight average", configMINIMAL_STACK_SIZE, pv_weigthavg_struct, 1, NULL);
+    }
+    else
+    {
+        struct task_parameters interference_struct = {.name = "", .task_function = interfering_task, .data = appdata, .data_size = MAX_DATA_SIZE};
+        struct task_parameters *pv_interference_struct = (struct task_parameters *)pvPortMalloc(sizeof(struct task_parameters));
+        *pv_interference_struct = interference_struct;
 
+        xTaskCreate(prefetch_task, "Interference", configMINIMAL_STACK_SIZE, pv_interference_struct, 1, NULL);
+    }
+    
     vTaskStartScheduler();
 }
