@@ -21,7 +21,7 @@
 // To use with 1 processor for WCET measure, 4 processors for taskset measurement
 
 // First one does not count
-#define NUMBER_OF_TESTS 2
+#define NUMBER_OF_TESTS 100001
 
 struct task_parameters
 {
@@ -157,7 +157,7 @@ void main_app(void)
     // Else interfering tasks
     else 
     {
-        struct premtask_parameters interference_struct = {.tickPeriod = 0, .data_size=MAX_DATA_SIZE, .data=appdata, .wcet = 1000000000, .pvParameters = NULL};
+        struct premtask_parameters interference_struct = {.tickPeriod = 0, .data_size=MAX_DATA_SIZE, .data=appdata, .wcet = 10000000, .pvParameters = NULL};
         xTaskPREMCreate(
             interfering_task,
             "Interference",

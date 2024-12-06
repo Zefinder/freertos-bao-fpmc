@@ -7,13 +7,14 @@
 
 #include <stdio.h>
 
+#include <hypervisor.h>
 #include <prefetch.h>
 #include <benchmark.h>
 #include <data.h>
 
 #define NUMBER_OF_TESTS 100000
 #define DATA_SIZE MAX_DATA_SIZE
-#define MIN_DATA_SIZE MAX_DATA_SIZE
+#define MIN_DATA_SIZE 386 kB
 #define DATA_SIZE_INCREMENT 1 kB
 
 int counter = 0;
@@ -22,6 +23,9 @@ volatile uint64_t data_size = 0;
 
 void prefetch(void *arg)
 {
+    // Clear cache
+    clear_L2_cache((uint64_t)appdata, (uint64_t)data_size);
+
     // Just prefetch
     prefetch_data((uint64_t)appdata, (uint64_t)data_size);
 }
@@ -37,22 +41,12 @@ void vMasterTask(void *pvParameters)
         int data_size_ko = BtkB(data_size);
         char test_name[20];
         sprintf(test_name, "_%dkB", data_size_ko);
-        init_benchmark(test_name, MEASURE_NANO, 1);
+        init_benchmark(test_name, MEASURE_NANO, 0);
 
         while (counter++ < NUMBER_OF_TESTS)
         {
-            // Clear cache
-            clear_L2_cache((uint64_t)appdata, (uint64_t)data_size);
-
             // Run prefetch benchmark
             run_benchmark(prefetch, NULL);
-
-            // Print for each 1000 tests
-            if (++print_counter == 1000)
-            {
-                printf("\t# Number of realised tests: %d\n", counter);
-                print_counter = 0;
-            }
         }
 
         // Reset counters
@@ -68,7 +62,8 @@ void vMasterTask(void *pvParameters)
 
 void main_app(void)
 {
-    printf("Begin solo tests...\n");
+    start_benchmark();
+
     xTaskCreate(
         vMasterTask,
         "MasterTask",

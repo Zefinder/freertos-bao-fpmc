@@ -49,9 +49,7 @@ void suspend_task()
         __asm__ volatile("wfi");
     
         // Woken up by either tick interrupt or IPI resume, ask for rescheduling
-        // vTaskDelay(0);
-        // hypercall(HC_DISPLAY_RESULTS, cpu_priority, 0, 69);
-
+        vTaskDelay(0);
     }
 }
 
@@ -59,11 +57,9 @@ void suspend_task()
 /* Value that indicates if need to suspend prefetch (0 is no) */
 void ipi_pause_handler(unsigned int id)
 {
-    // hypercall(HC_DISPLAY_RESULTS, cpu_priority, 0, 42);
     enum states current_state = get_current_state();
     if (current_state == MEMORY_PHASE)
     {
-        // hypercall(HC_DISPLAY_RESULTS, cpu_priority, 0, 43);
         // Pause task (we already are in prefetch)
         change_state(SUSPENDED);
         suspend_prefetch = 1;
@@ -72,11 +68,9 @@ void ipi_pause_handler(unsigned int id)
 
 void ipi_resume_handler(unsigned int id)
 {
-    // hypercall(HC_DISPLAY_RESULTS, cpu_priority, 0, 44);
     enum states current_state = get_current_state();
     if (current_state == SUSPENDED)
     {
-        // hypercall(HC_DISPLAY_RESULTS, cpu_priority, 0, 45);
         // Resume task
         suspend_prefetch = 0;
         change_state(MEMORY_PHASE);
@@ -143,13 +137,11 @@ void vPREMTask(void *pvParameters)
     // Stop scheduler to be sure to not be preempted
     vTaskSuspendAll();
 
-    // printf("a\n");
     // If hypercall counter is 0, then we request memory
     if (hypercalled++ == 0)
     {
         memory_access.raw = request_memory_access(cpu_priority, prv_premtask_parameters->wcet);
     }
-    // printf("b\n");
 
     // Whether the answer is yes or no, if ttw is not 0 then set a number a cycles to wait before leaving low prio
     if (memory_access.ttw != 0)
@@ -157,42 +149,33 @@ void vPREMTask(void *pvParameters)
         // Compute cycles to wait
         end_low_prio = generic_timer_read_counter() + memory_access.ttw;
     }
-    // printf("c\n");
 
     // If answer is no, then set suspended
     if (memory_access.ack == 0)
     {
-        // printf("d\n");
         change_state(SUSPENDED);
         suspend_prefetch = 1;
 
         // Re-enable scheduler so higher prio tasks can take over
         xTaskResumeAll();
         suspend_task();
-        // printf("e\n");
 
         // Once got out, stop scheduler!
         vTaskSuspendAll();
     }
 
-    // printf("f\n");
-
     // Begin memory phase
     change_state(MEMORY_PHASE);
     prefetch_data_prem((uint64_t)prv_premtask_parameters->data, prv_premtask_parameters->data_size, &suspend_prefetch);
-    // printf("g\n");
 
     // Revoke access and compute
     change_state(COMPUTATION_PHASE);
     end_low_prio = 0;
     revoke_memory_access();
-    // printf("h\n");
     prv_premtask_parameters->pxTaskCode(prv_premtask_parameters->pvParameters);
-    // printf("i\n");
 
     // Clear used cache
     clear_L2_cache((uint64_t)prv_premtask_parameters->data, prv_premtask_parameters->data_size);
-    // printf("j\n");
 
     // Decrease hypercall counter and if it is more than 1, we request again (for preempted task)
     if (--hypercalled != 0)
@@ -209,14 +192,12 @@ void vPREMTask(void *pvParameters)
     {
         memory_access.raw = 0;
     }
-    // printf("k\n");
 
 
     // Measure response time (Write from hypervisor task priority and response time)
     // Always skip the first one
     if (measure_response_time && response_number[prv_premtask_parameters->task_id]++ > 0)
     {
-        // printf("l\n");
         uint64_t end_time = generic_timer_read_counter();
         uint64_t release_time = get_last_period_start(prv_premtask_parameters->task_id);
         uint64_t response_time = pdSYSTICK_TO_NS(generic_timer_get_freq(), end_time - release_time);
@@ -226,34 +207,28 @@ void vPREMTask(void *pvParameters)
             response_max[prv_premtask_parameters->task_id] = response_time;
         }
         response_sum[prv_premtask_parameters->task_id] += response_time;
-        // printf("m\n");
     }
-    // printf("n\n");
 
     if (kill_prem_task == 1)
     {
-        // printf("o\n");
         // Notify periodic task to kill this one
         kill_prem_task = 0;
         vTaskPeriodicDelete();
-        // printf("p\n");
 
         display_results(prv_premtask_parameters->task_id);
-        // printf("q\n");
 
         // Free task parameters
         vPortFree(prv_premtask_parameters);
-        // printf("r\n");
+
+        // Remove one to task id (not smart when 2 tasks and task 1 is deleted...)
+        task_id--;
 
     }
     else if (ask_display_results == 1)
     {
-        // printf("s\n");
         ask_display_results = 0;
         display_results(prv_premtask_parameters->task_id);
-        // printf("t\n");
     }
-    // printf("u\n\n");
 
     // Wait (resume scheduler)
     change_state(WAITING);
@@ -270,6 +245,8 @@ BaseType_t xTaskPREMCreate(TaskFunction_t pxTaskCode,
     // Create and fill struct
     // This structure is NEVER freed since task is never deleted and this is always used!
     struct prv_premtask_parameters *premtask_parameters_ptr = (struct prv_premtask_parameters *)pvPortMalloc(sizeof(struct prv_premtask_parameters));
+
+    printf("%d\n", task_id);
 
     premtask_parameters_ptr->pxTaskCode = pxTaskCode;
     premtask_parameters_ptr->data_size = premtask_parameters.data_size;

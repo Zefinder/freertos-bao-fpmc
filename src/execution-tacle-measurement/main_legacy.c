@@ -84,7 +84,13 @@ void master_task(void *pvParameters)
 
 void interfering_task(void *pvParameters)
 {
-    // Nothing here, just nothing...
+    // Nothing here, just nothing... prefetch clear
+    while (1)
+    {
+        prefetch_data((uint64_t)appdata, (uint64_t)MAX_DATA_SIZE);
+        clear_L2_cache((uint64_t)appdata, (uint64_t)MAX_DATA_SIZE);
+    }
+
 }
 
 void main_app(void)
@@ -129,11 +135,7 @@ void main_app(void)
     }
     else
     {
-        struct task_parameters interference_struct = {.name = "", .task_function = interfering_task, .data = appdata, .data_size = MAX_DATA_SIZE};
-        struct task_parameters *pv_interference_struct = (struct task_parameters *)pvPortMalloc(sizeof(struct task_parameters));
-        *pv_interference_struct = interference_struct;
-
-        xTaskCreate(prefetch_task, "Interference", configMINIMAL_STACK_SIZE, pv_interference_struct, 1, NULL);
+        xTaskCreate(interfering_task, "Interference", configMINIMAL_STACK_SIZE, NULL, 1, NULL);
     }
     
     vTaskStartScheduler();
