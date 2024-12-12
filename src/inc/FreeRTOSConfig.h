@@ -149,6 +149,9 @@ void FreeRTOS_ClearTickInterrupt( void );
 
 #define configUSE_PORT_OPTIMISED_TASK_SELECTION 1
 
+// #define traceENTER_vTaskDelay( xTicksToDelay ) printf("Entered vTaskDelay (%d)\n", xTicksToDelay)
+// #define traceRETURN_vTaskDelay() printf("Returned vTaskDelay\n")
+
 #ifdef FREERTOS_ENABLE_TRACE
 #include "FreeRTOSSTMTrace.h"
 #endif /* FREERTOS_ENABLE_TRACE */

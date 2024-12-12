@@ -63,13 +63,10 @@ void vPeriodicTask(void *pvParameters)
             // Get current tick count
             uint64_t currentTick = generic_timer_read_counter();
             uint64_t next_period_start = last_period_start[task_id] + tickPeriod;
-            // printf("Current tick: %lld\nNext period: %lld\nSysticks to wait: %lld\n", currentTick, next_period_start, next_period_start - currentTick);
-
+            
             // If a new cycle didn't start yet, then delay
             if (currentTick < next_period_start)
             {
-                // printf("Ticks to wait: %lld\n\n", pdSYSTICK_TO_TICKS(sysfreq, next_period_start - currentTick));
-
                 // Put the task into WAIT state, so compute the number of FreeRTOS cycles to wait
                 vTaskDelay(pdSYSTICK_TO_TICKS(generic_timer_get_freq(), next_period_start - currentTick));
 

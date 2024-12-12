@@ -111,7 +111,17 @@ BaseType_t xTaskPREMCreate(TaskFunction_t pxTaskCode,
  */
 void vTaskPREMDelete(void);    
 
+/*
+ * Asks for results to be displayed without deleting the task. This will display results
+ * as normal and reset the counters so other measurements can be done.
+ */
 void askDisplayResults(void);
+
+/*
+ * Asks for the change of the prefetch size. The change will be effective from the next
+ * execution onwards (unless another change is requested).
+ */
+void askChangePrefetchSize(uint64_t new_size);
 
 /*
  * Init PREM with this function. This is mandatory to do it if you used the DEFAULT_IPI

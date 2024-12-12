@@ -151,5 +151,7 @@ wait_for_int:
     b wait_for_int          // And recheck (maybe it was IPI_RESUME)
 
 end_prefetch_prem:
+	dsb   SY
+	isb
     ret
 .endfunc

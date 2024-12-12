@@ -22,9 +22,6 @@
 #error DEFAULT_IPI must be defined with value y for this test (make all ... DEFAULT_IPI=y)
 #endif
 
-// Task handler, change to array for multiple tasks in the future
-TaskHandle_t xTaskHandler;
-
 #define NUMBER_OF_TESTS 100001
 #define DATA_SIZE MAX_DATA_SIZE
 #define MIN_DATA_SIZE 1 kB
@@ -34,49 +31,40 @@ uint64_t data_size = 0;
 uint64_t test_number = 0;
 uint8_t init = 0;
 
-void task(void *arg)
+struct premtask_parameters measure_task_struct;
+uint64_t current_data_size = MIN_DATA_SIZE;
+
+void measuring_task(void *pvParameters)
 {
-    // Nothin, just vibin
+    if (test_number == 0)
+    {
+        // This one does not count is the measurements so we can
+        // display the size without fearing having bad benchmarks
+        printf("\n# Execution for %d kB\n", BtkB(current_data_size));
+    }
+
+    // If test number ok, then return to 0 and new size
     if (++test_number == NUMBER_OF_TESTS)
     {
-        vTaskPREMDelete();
+        test_number = 0;
+
+        // If already max size, then delete
+        if (current_data_size == DATA_SIZE)
+        {
+            vTaskPREMDelete();
+        }
+        else
+        {
+            askDisplayResults();
+            current_data_size += DATA_SIZE_INCREMENT;
+            askChangePrefetchSize(current_data_size);
+        }
     }
 }
 
-void vMasterTask(void *pvParameters)
+void interference_task(void *pvParameters)
 {
-    start_benchmark();
-    for (data_size = MIN_DATA_SIZE; data_size <= DATA_SIZE; data_size += DATA_SIZE_INCREMENT)
-    {
-        test_number = 0; 
-
-        // Create a PREM task with the good size
-        struct premtask_parameters prem_struct = {.tickPeriod = 0, .data_size = data_size, .data = appdata, .wcet = 0, .pvParameters = NULL};
-
-        // Launch it and put a higher priority
-        xTaskPREMCreate(
-            task,
-            "task",
-            configMINIMAL_STACK_SIZE,
-            prem_struct,
-            2,
-            NULL);
-
-        // If not initialised, init PREM
-        if (!init)
-        {
-            init = 1;
-            vInitPREM();
-        }
-
-        // Wait to force a reschedule
-        vTaskDelay(0);
-
-        // When back here, the task has been deleted, go to next size
-    }
-
-    end_benchmark();
-    vTaskDelete(NULL);
+    // Nothin' here, just vibin'
 }
 
 void main_app(void)
@@ -84,27 +72,32 @@ void main_app(void)
     uint64_t cpu_id = hypercall(HC_GET_CPU_ID, 0, 0, 0);
     if (cpu_id == 0)
     {
-        xTaskCreate(
-            vMasterTask,
-            "MasterTask",
+        measure_task_struct.tickPeriod = 0;
+        measure_task_struct.data_size = current_data_size;
+        measure_task_struct.data = appdata;
+        measure_task_struct.wcet = 0;
+        measure_task_struct.pvParameters = NULL;
+
+        xTaskPREMCreate(
+            measuring_task,
+            "measure task",
             configMINIMAL_STACK_SIZE,
-            NULL,
+            measure_task_struct,
             1,
-            &(xTaskHandler));
+            NULL);
     }
     else
     {
         struct premtask_parameters prem_struct = {.tickPeriod = 0, .data_size = MAX_DATA_SIZE, .data = appdata, .wcet = 0, .pvParameters = NULL};
         xTaskPREMCreate(
-            task,
+            interference_task,
             "interference",
             configMINIMAL_STACK_SIZE,
             prem_struct,
             1,
             NULL);
-
-        vInitPREM();
     }
 
+    vInitPREM();
     vTaskStartScheduler();
 }

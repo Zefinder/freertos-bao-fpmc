@@ -14,7 +14,7 @@
 
 #define NUMBER_OF_TESTS 100000
 #define DATA_SIZE MAX_DATA_SIZE
-#define MIN_DATA_SIZE 386 kB
+#define MIN_DATA_SIZE 1 kB
 #define DATA_SIZE_INCREMENT 1 kB
 
 int counter = 0;
@@ -33,7 +33,6 @@ void prefetch(void *arg)
 void vMasterTask(void *pvParameters)
 {
     start_benchmark();
-    printf("\t# Number of realised tests: %d\n", counter);
 
     for (data_size = MIN_DATA_SIZE; data_size <= DATA_SIZE; data_size += DATA_SIZE_INCREMENT)
     {
@@ -62,8 +61,6 @@ void vMasterTask(void *pvParameters)
 
 void main_app(void)
 {
-    start_benchmark();
-
     xTaskCreate(
         vMasterTask,
         "MasterTask",
