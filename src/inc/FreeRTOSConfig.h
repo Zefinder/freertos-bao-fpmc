@@ -74,7 +74,7 @@
 
 #define configMINIMAL_STACK_SIZE ( ( unsigned short ) 200)
 
-#define configTOTAL_HEAP_SIZE ( ( size_t ) ( 65536 ) )
+#define configTOTAL_HEAP_SIZE ( ( size_t ) ( 0x40000 ) )
 
 #define configMAX_TASK_NAME_LEN 10
 
@@ -151,6 +151,10 @@ void FreeRTOS_ClearTickInterrupt( void );
 
 // #define traceENTER_vTaskDelay( xTicksToDelay ) printf("Entered vTaskDelay (%d)\n", xTicksToDelay)
 // #define traceRETURN_vTaskDelay() printf("Returned vTaskDelay\n")
+
+// #define traceENTER_vTaskDelete( xTaskToDelete ) printf("Entered task delete\n")
+// #define traceTASK_DELETE( pxTaskToDelete ) printf("Task deleted\n")
+// #define traceRETURN_vTaskDelete() printf("Return from task delete\n")
 
 #ifdef FREERTOS_ENABLE_TRACE
 #include "FreeRTOSSTMTrace.h"

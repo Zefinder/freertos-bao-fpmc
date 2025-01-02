@@ -163,7 +163,7 @@ void vPREMTask(void *pvParameters)
     {
         change_state(SUSPENDED);
         suspend_prefetch = 1;
-        // printf("ratio\n");
+        printf("ratio\n");
         // Re-enable scheduler so higher prio tasks can take over
         // xTaskResumeAll();
         // suspend_task();
@@ -247,9 +247,6 @@ void vPREMTask(void *pvParameters)
 
         // Free task parameters
         vPortFree(prv_premtask_parameters);
-
-        // Remove one to task id (not smart when 2 tasks and task 1 is deleted...)
-        task_id--;
     }
     else if (ask_display_results == 1)
     {

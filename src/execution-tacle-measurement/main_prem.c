@@ -120,7 +120,7 @@ void main_app(void)
 
         weightavg.task_function = weightavg_task;
         weightavg.counter = ntest_weightavg;
-        struct premtask_parameters weigthavg_struct = {.tickPeriod = 0, .data_size = 460 kB, .data = appdata, .wcet = 0, .pvParameters = &weightavg};
+        struct premtask_parameters weightavg_struct = {.tickPeriod = 0, .data_size = 460 kB, .data = appdata, .wcet = 0, .pvParameters = &weightavg};
 
         xTaskPREMCreate(
             master_task,
@@ -150,7 +150,7 @@ void main_app(void)
             master_task,
             "Weight average",
             configMINIMAL_STACK_SIZE,
-            weigthavg_struct,
+            weightavg_struct,
             1,
             NULL);
     }
@@ -174,5 +174,6 @@ void main_app(void)
     {
         cpu_priority = (2 * cpu_id) - 1;
     }
+
     vTaskStartScheduler();
 }

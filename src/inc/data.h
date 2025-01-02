@@ -3,8 +3,8 @@
 
 // Defines for sizes
 #define kB *1024
-#define MB kB*1024
-#define GB MB*1024
+#define MB *1024 kB
+#define GB *1024 MB
 
 /* Kilobyte from byte value */
 #define BtkB(size) (size / 1024)

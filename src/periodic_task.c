@@ -50,10 +50,6 @@ void vPeriodicTask(void *pvParameters)
         if (kill_periodic_task) {
             // Reset kill and delete
             kill_periodic_task = 0;
-
-            // Remove one to the task index (not very effective when more than one task...)
-            periodic_task_number--;
-
             vTaskDelete(NULL);
         }
 
