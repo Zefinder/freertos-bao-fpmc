@@ -23,6 +23,9 @@ volatile uint64_t data_size = 0;
 
 void prefetch(void *arg)
 {
+    // Clear cache
+    clear_L2_cache((uint64_t)appdata, (uint64_t)data_size);
+
     // Just prefetch
     prefetch_data((uint64_t)appdata, (uint64_t)data_size);
 }
@@ -41,9 +44,6 @@ void vMasterTask(void *pvParameters)
 
         while (counter++ < NUMBER_OF_TESTS)
         {
-            // Clear cache
-            clear_L2_cache((uint64_t)appdata, (uint64_t)data_size);
-            
             // Run prefetch benchmark
             run_benchmark(prefetch, NULL);
         }
