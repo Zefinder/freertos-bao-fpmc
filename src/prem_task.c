@@ -53,7 +53,7 @@ void suspend_task()
         __asm__ volatile("wfi");
 
         // Woken up by either tick interrupt or IPI resume, ask for rescheduling
-        // vTaskDelay(0);
+        vTaskDelay(0);
     }
 }
 
@@ -163,7 +163,6 @@ void vPREMTask(void *pvParameters)
     {
         change_state(SUSPENDED);
         suspend_prefetch = 1;
-        printf("ratio\n");
         // Re-enable scheduler so higher prio tasks can take over
         // xTaskResumeAll();
         // suspend_task();

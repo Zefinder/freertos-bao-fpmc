@@ -21,7 +21,7 @@
 // To use with 1 processor for WCET measure, 4 processors for taskset measurement
 
 // First one does not count
-#define NUMBER_OF_TESTS 100001
+#define NUMBER_OF_TESTS 30001
 
 struct task_parameters
 {
@@ -34,6 +34,7 @@ uint64_t ntest_mpeg = 0;
 uint64_t ntest_countnegative = 0;
 uint64_t ntest_bubblesort = 0;
 uint64_t ntest_weightavg = 0;
+uint64_t cpu_number = 0;
 
 void weightavg_task(void *pvParameters)
 {
@@ -52,7 +53,6 @@ void weightavg_task(void *pvParameters)
     array_avg = array_sum / offset_2;
 }
 
-// Test with all 4 priorities
 void master_task(void *pvParameters)
 {
     struct task_parameters *task_parameters = (struct task_parameters *)pvParameters;
@@ -60,29 +60,9 @@ void master_task(void *pvParameters)
 
     if (++task_parameters->counter == NUMBER_OF_TESTS)
     {
-        task_parameters->counter = 0;
-
-        // When this is the last priority to check, reset and delete task
-        if (cpu_priority == 6)
-        {
-            cpu_priority = 0;
-            task_parameters->counter = 0;
-            vTaskPREMDelete();
-        }
-        else
-        {
-            // New priority
-            cpu_priority += 2;
-
-            // Print results
-            askDisplayResults();
-        }
+        // When this is the last test, then print results but continue to run (if this stops, it won't be a good example)
+        askDisplayResults();
     }
-}
-
-void interfering_task(void* pvParameters)
-{
-    // Nothing here, just nothing...
 }
 
 struct task_parameters mpeg, countnegative, bubblesort, weightavg;
@@ -90,90 +70,72 @@ struct task_parameters mpeg, countnegative, bubblesort, weightavg;
 void main_app(void)
 {
     // start_benchmark();
+    // Each execution last 60ms * number of tests
     /*
         Tasks mpeg2_task and countnegative_task from TACleBench
     */
 
     // If core 0 then init normal tasks
-    uint64_t cpu_id = hypercall(HC_GET_CPU_ID, 0, 0, 0);
-    if (cpu_id == 0)
-    {
-        // Init countnegative matrix and binarysearch array
-        countnegative_init();
-        bubblesort_init();
+    cpu_number = hypercall(HC_GET_CPU_ID, 0, 0, 0);
 
-        uint8_t *mpeg_data = get_mpeg2_oldorgframe();
-        uint8_t *countnegative_data = get_countnegative_array();
-        uint8_t *binarysearch_data = get_bubblesort_array();
+    // Init countnegative matrix and binarysearch array
+    countnegative_init();
+    bubblesort_init();
 
-        mpeg.task_function = mpeg2_main;
-        mpeg.counter = ntest_mpeg;
-        struct premtask_parameters mpeg_struct = {.tickPeriod = 0, .data_size = 88 kB * 4, .data = mpeg_data, .wcet = 0, .pvParameters = &mpeg};
+    uint8_t *mpeg_data = get_mpeg2_oldorgframe();
+    uint8_t *countnegative_data = get_countnegative_array();
+    uint8_t *binarysearch_data = get_bubblesort_array();
 
-        countnegative.task_function = countnegative_main;
-        countnegative.counter = ntest_countnegative;
-        struct premtask_parameters countnegative_struct = {.tickPeriod = 0, .data_size = CN_MAXSIZE * CN_MAXSIZE, .data = countnegative_data, .wcet = 0, .pvParameters = &countnegative};
+    // Create for all processors the same tasks, all will measure
+    mpeg.task_function = mpeg2_main;
+    mpeg.counter = ntest_mpeg;
+    struct premtask_parameters mpeg_struct = {.tickPeriod = pdMS_TO_TICKS(45), .data_size = 88 kB * 4, .data = mpeg_data, .wcet = 4755907, .pvParameters = &mpeg};
 
-        bubblesort.task_function = bubblesort_main;
-        bubblesort.counter = ntest_bubblesort;
-        struct premtask_parameters bubblesort_struct = {.tickPeriod = 0, .data_size = BS_MAXSIZE * 8, .data = binarysearch_data, .wcet = 0, .pvParameters = &bubblesort};
+    countnegative.task_function = countnegative_main;
+    countnegative.counter = ntest_countnegative;
+    struct premtask_parameters countnegative_struct = {.tickPeriod = pdMS_TO_TICKS(55), .data_size = CN_MAXSIZE * CN_MAXSIZE, .data = countnegative_data, .wcet = 6083944, .pvParameters = &countnegative};
 
-        weightavg.task_function = weightavg_task;
-        weightavg.counter = ntest_weightavg;
-        struct premtask_parameters weightavg_struct = {.tickPeriod = 0, .data_size = 460 kB, .data = appdata, .wcet = 0, .pvParameters = &weightavg};
+    bubblesort.task_function = bubblesort_main;
+    bubblesort.counter = ntest_bubblesort;
+    struct premtask_parameters bubblesort_struct = {.tickPeriod = pdMS_TO_TICKS(60), .data_size = BS_MAXSIZE * 8, .data = binarysearch_data, .wcet = 26362129, .pvParameters = &bubblesort};
 
-        xTaskPREMCreate(
-            master_task,
-            "MPEG2",
-            configMINIMAL_STACK_SIZE,
-            mpeg_struct,
-            4,
-            NULL);
+    weightavg.task_function = weightavg_task;
+    weightavg.counter = ntest_weightavg;
+    struct premtask_parameters weightavg_struct = {.tickPeriod = pdMS_TO_TICKS(50), .data_size = 460 kB, .data = appdata, .wcet = 5861944, .pvParameters = &weightavg};
 
-        xTaskPREMCreate(
-            master_task,
-            "Count negative",
-            configMINIMAL_STACK_SIZE,
-            countnegative_struct,
-            3,
-            NULL);
+    xTaskPREMCreate(
+        master_task,
+        "MPEG2",
+        1 MB >> sizeof(StackType_t),
+        mpeg_struct,
+        4,
+        NULL);
 
-        xTaskPREMCreate(
-            master_task,
-            "Bubble sort",
-            configMINIMAL_STACK_SIZE,
-            bubblesort_struct,
-            2,
-            NULL);
+    xTaskPREMCreate(
+        master_task,
+        "Weight average",
+        1 MB >> sizeof(StackType_t),
+        weightavg_struct,
+        3,
+        NULL);
 
-        xTaskPREMCreate(
-            master_task,
-            "Weight average",
-            configMINIMAL_STACK_SIZE,
-            weightavg_struct,
-            1,
-            NULL);
-    }
-    // Else interfering tasks
-    else 
-    {
-        struct premtask_parameters interference_struct = {.tickPeriod = 0, .data_size=MAX_DATA_SIZE, .data=appdata, .wcet = 10000000, .pvParameters = NULL};
-        xTaskPREMCreate(
-            interfering_task,
-            "Interference",
-            configMINIMAL_STACK_SIZE,
-            interference_struct,
-            1,
-            NULL
-        );
-    }
+    xTaskPREMCreate(
+        master_task,
+        "Count negative",
+        1 MB >> sizeof(StackType_t),
+        countnegative_struct,
+        2,
+        NULL);
+
+    xTaskPREMCreate(
+        master_task,
+        "Bubble sort",
+        1 MB >> sizeof(StackType_t),
+        bubblesort_struct,
+        1,
+        NULL);
+
 
     vInitPREM();
-
-    if (cpu_id != 0)
-    {
-        cpu_priority = (2 * cpu_id) - 1;
-    }
-
     vTaskStartScheduler();
 }

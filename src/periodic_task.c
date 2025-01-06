@@ -46,8 +46,9 @@ void vPeriodicTask(void *pvParameters)
         // Execute task
         pxTaskCode(pvTaskParameters);
 
-        // If delete function called during code execution... 
-        if (kill_periodic_task) {
+        // If delete function called during code execution...
+        if (kill_periodic_task)
+        {
             // Reset kill and delete
             kill_periodic_task = 0;
             vTaskDelete(NULL);
@@ -59,7 +60,7 @@ void vPeriodicTask(void *pvParameters)
             // Get current tick count
             uint64_t currentTick = generic_timer_read_counter();
             uint64_t next_period_start = last_period_start[task_id] + tickPeriod;
-            
+
             // If a new cycle didn't start yet, then delay
             if (currentTick < next_period_start)
             {
@@ -67,10 +68,9 @@ void vPeriodicTask(void *pvParameters)
                 vTaskDelay(pdSYSTICK_TO_TICKS(generic_timer_get_freq(), next_period_start - currentTick));
 
                 // The pdSYSTICK_TO_TICKS gives an underestimation of the number of cycles to wait...
-                // So wait for the remaining number of systicks 
+                // So wait for the remaining number of systicks
                 while (currentTick < next_period_start)
                 {
-                    // printf("Stuck here %d\n", task_id);
                     currentTick = generic_timer_read_counter();
                 }
             }
@@ -85,12 +85,22 @@ void vPeriodicTask(void *pvParameters)
                 {
                     next_period_start += tickPeriod;
                 }
+
+                // Put the task into WAIT state, so compute the number of FreeRTOS cycles to wait
+                vTaskDelay(pdSYSTICK_TO_TICKS(generic_timer_get_freq(), next_period_start - currentTick));
+
+                // The pdSYSTICK_TO_TICKS gives an underestimation of the number of cycles to wait...
+                // So wait for the remaining number of systicks
+                while (currentTick < next_period_start)
+                {
+                    currentTick = generic_timer_read_counter();
+                }
             }
 
             // Update last period start cycle
             last_period_start[task_id] = next_period_start;
         }
-        else 
+        else
         {
             last_period_start[task_id] = generic_timer_read_counter();
         }
@@ -127,7 +137,8 @@ TickType_t get_last_period_start(uint8_t task_id)
     return last_period_start[task_id];
 }
 
-void vTaskPeriodicDelete() {
+void vTaskPeriodicDelete()
+{
     kill_periodic_task = 1;
 }
 
